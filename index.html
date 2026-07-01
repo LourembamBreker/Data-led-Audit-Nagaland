@@ -1,0 +1,2622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Data-Led Audit Dashboard</title>
+<meta name="description" content="Data-Led Audit Dashboard — Office of the Principal Accountant General (Audit), Nagaland"/>
+<script>
+/* Set theme before first paint to avoid a flash of the wrong theme. */
+(function(){
+  try{
+    var t = localStorage.getItem('dac-dashboard-theme') || 'light';
+    document.documentElement.setAttribute('data-theme', t);
+  }catch(e){}
+})();
+</script>
+<style>
+/* ==========================================================================
+   DATA-LED AUDIT DASHBOARD — STYLES
+   ----------------------------------------------------------------------
+   Token system -> layout shell -> components, roughly in the order
+   they appear on screen (header/sidebar first, then page content,
+   then overlays). Dark mode is a full token override under
+   [data-theme="dark"], not a per-component patch.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+:root{
+  /* -- core palette (light) -- */
+  --page-bg:#f3f5f9; --surface:#ffffff; --surface-alt:#eef1f7;
+  --border:#dfe3ec; --border-strong:#c7cedd;
+  --ink:#16213a; --ink-soft:#46506b; --muted:#818da3;
+  --navy:#0b2a4d; --navy-soft:#123862; --navy-ink:#eaf0fb;
+  --blue:#1768c2; --blue-strong:#0f4f99; --blue-tint:#e8f1fb;
+  --gold:#9c6b00; --gold-tint:#faf3e2;
+  --teal:#0f7d72; --plum:#6a3f9e;
+  --high:#c0392b; --high-bg:#fbeae8;
+  --medium:#9c6b00; --medium-bg:#faf3e2;
+  --low:#1f8a52; --low-bg:#e8f6ee;
+  --shadow-sm:0 1px 2px rgba(15,28,53,.05);
+  --shadow:0 1px 3px rgba(15,28,53,.06),0 10px 26px -14px rgba(15,28,53,.16);
+  --shadow-lg:0 18px 44px -18px rgba(15,28,53,.28);
+
+  /* -- type -- */
+  --font-display:'Source Serif 4',Georgia,serif;
+  --font-body:'Public Sans',-apple-system,'Segoe UI',sans-serif;
+  --font-mono:'IBM Plex Mono','SFMono-Regular',Consolas,monospace;
+
+  /* -- layout -- */
+  --sidebar-w:252px; --sidebar-w-collapsed:78px;
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-pill:999px;
+  --header-h:72px;
+}
+
+[data-theme="dark"]{
+  --page-bg:#0b121e; --surface:#121b2c; --surface-alt:#172234;
+  --border:#263551; --border-strong:#344667;
+  --ink:#e7ecf6; --ink-soft:#c1cbdf; --muted:#8b96ad;
+  --navy:#070e1a; --navy-soft:#0e1b2e; --navy-ink:#dfe8fb;
+  --blue:#4d9bef; --blue-strong:#69ade7; --blue-tint:rgba(77,155,239,.13);
+  --gold:#dba946; --gold-tint:rgba(219,169,70,.13);
+  --teal:#33b0a1; --plum:#a481dd;
+  --high:#e2675a; --high-bg:rgba(226,103,90,.14);
+  --medium:#dba946; --medium-bg:rgba(219,169,70,.14);
+  --low:#3fc789; --low-bg:rgba(63,199,137,.14);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 3px rgba(0,0,0,.32),0 12px 30px -16px rgba(0,0,0,.55);
+  --shadow-lg:0 20px 48px -18px rgba(0,0,0,.6);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--page-bg); color:var(--ink); font-family:var(--font-body);
+  font-size:15px; line-height:1.5; min-height:100vh;
+  transition:background .2s ease,color .2s ease;
+}
+img,svg{display:block;max-width:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:none;cursor:pointer}
+a{color:inherit;text-decoration:none}
+ul{list-style:none}
+h1,h2,h3{font-family:var(--font-display);font-weight:700;line-height:1.25}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important;}
+}
+
+:focus-visible{outline:2.5px solid var(--blue);outline-offset:2px;border-radius:4px}
+
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:8px}
+
+.icon{width:18px;height:18px;flex-shrink:0;display:inline-block;vertical-align:-4px}
+
+/* ── App shell ───────────────────────────────────────────────────────── */
+.app-shell{display:flex;min-height:100vh}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────── */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;background:var(--navy);color:var(--navy-ink);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;z-index:60;
+  transition:width .22s cubic-bezier(.4,0,.2,1),transform .22s ease;
+}
+.app-shell.sidebar-collapsed .sidebar{width:var(--sidebar-w-collapsed)}
+.sidebar-top{display:flex;align-items:center;justify-content:space-between;padding:18px 14px 14px;gap:8px}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1;padding:4px;border-radius:var(--radius-sm)}
+.brand-mark{flex-shrink:0;width:34px;height:34px;color:var(--gold);display:flex;align-items:center;justify-content:center}
+.brand-mark svg{width:32px;height:32px}
+.brand-text{display:flex;flex-direction:column;line-height:1.15;min-width:0;overflow:hidden;white-space:nowrap}
+.brand-text strong{font-family:var(--font-display);font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:.02em}
+.brand-text span{font-size:.66rem;color:rgba(234,240,251,.62);font-weight:600;text-transform:uppercase;letter-spacing:.07em}
+.app-shell.sidebar-collapsed .brand-text{display:none}
+.sidebar-collapse-btn{
+  width:30px;height:30px;border-radius:var(--radius-sm);color:rgba(234,240,251,.75);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s,transform .22s;
+}
+.sidebar-collapse-btn:hover{background:rgba(255,255,255,.08);color:#fff}
+.app-shell.sidebar-collapsed .sidebar-collapse-btn{transform:rotate(180deg)}
+
+.sidebar-nav{flex:1;overflow-y:auto;padding:6px 12px;display:flex;flex-direction:column;gap:2px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:var(--radius-sm);
+  color:rgba(234,240,251,.74);font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;
+  transition:background .15s,color .15s;position:relative;
+}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.nav-item.active{background:var(--blue);color:#fff;box-shadow:var(--shadow-sm)}
+.nav-icon{flex-shrink:0;width:19px;height:19px;display:flex}
+.nav-icon .icon{width:19px;height:19px}
+.nav-label{overflow:hidden;text-overflow:ellipsis}
+.app-shell.sidebar-collapsed .nav-label{display:none}
+.app-shell.sidebar-collapsed .nav-item{justify-content:center}
+.nav-divider{height:1px;background:rgba(255,255,255,.1);margin:10px 4px}
+
+.sidebar-bottom{padding:12px;border-top:1px solid rgba(255,255,255,.1)}
+.add-category-btn{
+  width:100%;display:flex;align-items:center;justify-content:center;gap:8px;
+  border:1.5px dashed rgba(234,240,251,.34);color:rgba(234,240,251,.85);
+  padding:10px 10px;border-radius:var(--radius-sm);font-size:.78rem;font-weight:600;
+  transition:border-color .15s,color .15s,background .15s;text-align:center;
+}
+.add-category-btn span:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.add-category-btn:hover{border-color:var(--gold);color:var(--gold);background:rgba(255,255,255,.05)}
+.app-shell.sidebar-collapsed .add-category-btn span:last-child{display:none}
+
+.sidebar-scrim{display:none}
+
+/* ── Topbar / header ─────────────────────────────────────────────────── */
+.content-area{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:13px 28px;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  position:sticky;top:0;z-index:50;min-height:var(--header-h);
+}
+.topbar-left{display:flex;align-items:center;gap:14px;min-width:0}
+.mobile-menu-btn{display:none;width:36px;height:36px;border-radius:var(--radius-sm);align-items:center;justify-content:center;color:var(--ink-soft);flex-shrink:0}
+.mobile-menu-btn:hover{background:var(--surface-alt)}
+.topbar-titles{min-width:0}
+.topbar-titles h1{font-size:1.32rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:uppercase;letter-spacing:.015em}
+.topbar-titles p{font-size:.72rem;color:var(--muted);font-weight:600;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.updated-badge{font-size:.66rem;font-weight:600;color:var(--muted);background:var(--surface-alt);border:1px solid var(--border);padding:5px 10px;border-radius:var(--radius-pill);white-space:nowrap}
+.icon-btn{
+  width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;
+  color:var(--ink-soft);border:1px solid transparent;transition:background .15s,border-color .15s;
+}
+.icon-btn:hover{background:var(--surface-alt);border-color:var(--border)}
+.btn-edit{
+  display:flex;align-items:center;gap:7px;background:var(--blue);color:#fff;border:none;
+  padding:9px 16px;border-radius:var(--radius-sm);font-size:.79rem;font-weight:700;
+  box-shadow:var(--shadow-sm);transition:background .15s,transform .1s;white-space:nowrap;
+}
+.btn-edit:hover{background:var(--blue-strong)}
+.btn-edit.active{background:var(--low)}
+
+/* ── Breadcrumb bar ──────────────────────────────────────────────────── */
+.breadcrumb-bar{display:none;align-items:center;gap:14px;padding:12px 28px;border-bottom:1px solid var(--border);background:var(--surface-alt)}
+.breadcrumb-bar.visible{display:flex}
+.btn-back{
+  display:flex;align-items:center;gap:4px;font-size:.78rem;font-weight:700;color:var(--ink-soft);
+  padding:6px 10px 6px 6px;border-radius:var(--radius-sm);flex-shrink:0;transition:background .15s;
+}
+.btn-back:hover{background:var(--surface)}
+.breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:4px;font-size:.78rem;min-width:0}
+.crumb{color:var(--muted);font-weight:600;padding:3px 4px;border-radius:4px;transition:color .15s}
+.crumb:hover{color:var(--blue)}
+.crumb-sep{width:13px;height:13px;color:var(--border-strong);flex-shrink:0}
+.crumb-sep .icon{width:13px;height:13px}
+.crumb.current{color:var(--ink);font-weight:700}
+
+/* ── View transitions ────────────────────────────────────────────────── */
+.view-root{flex:1;padding:24px 28px 56px;max-width:1480px;width:100%;margin:0 auto;transition:opacity .16s ease,transform .16s ease}
+.view-root.view-fade-out{opacity:0;transform:translateY(4px)}
+.view-root.view-fade-in{opacity:0;transform:translateY(4px);animation:viewIn .22s ease forwards}
+@keyframes viewIn{to{opacity:1;transform:translateY(0)}}
+
+/* ── Stats strip ─────────────────────────────────────────────────────── */
+.stats-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin-bottom:26px;box-shadow:var(--shadow-sm)}
+.stat-cell{background:var(--surface);padding:14px 18px;display:flex;flex-direction:column;gap:4px}
+.stat-label{font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:700}
+.stat-value{font-family:var(--font-mono);font-size:1.5rem;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+.stat-value.accent{color:var(--blue)}
+.stat-value.high{color:var(--high)}
+.stat-value.medium{color:var(--medium)}
+.stat-value.low{color:var(--low)}
+
+/* ── Section heading ─────────────────────────────────────────────────── */
+.view-section{margin-bottom:34px}
+.section-head{margin-bottom:14px}
+.section-head.row{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.section-head h2{font-size:1.18rem;color:var(--ink)}
+.section-sub{font-size:.82rem;color:var(--muted);margin-top:3px}
+.export-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ── Buttons (shared) ────────────────────────────────────────────────── */
+.btn-outline{
+  display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--border-strong);
+  color:var(--ink-soft);padding:9px 15px;border-radius:var(--radius-sm);font-size:.79rem;font-weight:700;
+  transition:border-color .15s,color .15s,background .15s;white-space:nowrap;
+}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-tint)}
+.btn-outline.danger:hover{border-color:var(--high);color:var(--high);background:var(--high-bg)}
+.btn-primary{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;background:var(--blue);color:#fff;
+  border:none;padding:10px 18px;border-radius:var(--radius-sm);font-size:.82rem;font-weight:700;
+  box-shadow:var(--shadow-sm);transition:background .15s;
+}
+.btn-primary:hover{background:var(--blue-strong)}
+.btn-ghost{padding:10px 16px;border-radius:var(--radius-sm);font-size:.82rem;font-weight:700;color:var(--muted);transition:background .15s,color .15s}
+.btn-ghost:hover{background:var(--surface-alt);color:var(--ink)}
+.btn-icon{width:30px;height:30px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .15s,color .15s}
+.btn-icon:hover{background:var(--surface-alt);color:var(--ink)}
+.btn-icon.danger{color:var(--high)}
+.btn-icon.danger:hover{background:var(--high-bg)}
+
+/* ── Badges ──────────────────────────────────────────────────────────── */
+.case-count{font-family:var(--font-mono);font-size:.78rem;color:var(--muted);font-weight:600}
+.case-count.lg{font-size:.92rem;color:var(--ink-soft)}
+
+/* ── Risk mini segmented bar ─────────────────────────────────────────── */
+.risk-mini{display:flex;height:6px;border-radius:4px;overflow:hidden;background:var(--surface-alt);width:100%;min-width:64px}
+.risk-mini .seg{height:100%}
+.risk-mini .seg.high{background:var(--high)}
+.risk-mini .seg.medium{background:var(--medium)}
+.risk-mini .seg.low{background:var(--low)}
+.risk-mini.empty{font-size:.66rem;color:var(--muted);font-style:italic;background:none}
+
+/* ── Big cards (Home: audit categories) ─────────────────────────────── */
+.big-card-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+.big-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:26px 24px;display:flex;gap:18px;align-items:flex-start;box-shadow:var(--shadow);
+  border-top:4px solid var(--accent,var(--blue));transition:transform .18s ease,box-shadow .18s ease;position:relative;
+}
+.big-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+.big-card-icon{
+  width:52px;height:52px;border-radius:var(--radius-md);background:var(--blue-tint);color:var(--accent,var(--blue));
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.big-card-icon .icon{width:27px;height:27px}
+.big-card-body{flex:1;min-width:0}
+.big-card-body h3{font-size:1.08rem;color:var(--ink);margin-bottom:6px}
+.big-card-body p{font-size:.84rem;color:var(--muted);line-height:1.55;margin-bottom:14px}
+.big-card-stats{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.big-card-stats > span{font-size:.74rem;color:var(--ink-soft);font-weight:600;white-space:nowrap}
+.big-card-stats > span strong{font-family:var(--font-mono);color:var(--ink);font-weight:600}
+.big-card-stats .risk-mini{flex:1;min-width:80px}
+.big-card-arrow{position:absolute;top:24px;right:22px;width:20px;height:20px;color:var(--border-strong);transition:transform .18s,color .18s}
+.big-card:hover .big-card-arrow{transform:translateX(3px);color:var(--accent,var(--blue))}
+
+/* ── Add card (dashed) ───────────────────────────────────────────────── */
+.add-card{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  border:2px dashed var(--border-strong);border-radius:var(--radius-lg);color:var(--muted);
+  padding:26px;min-height:120px;font-size:.82rem;font-weight:700;transition:all .18s ease;width:100%;
+}
+.add-card:hover{border-color:var(--blue);color:var(--blue);background:var(--blue-tint)}
+.add-card .icon{width:22px;height:22px}
+
+/* ── Page head (Category / Scheme / Flag) ───────────────────────────── */
+.page-head{display:flex;align-items:flex-start;gap:16px;margin-bottom:24px}
+.page-head-icon{
+  width:50px;height:50px;border-radius:var(--radius-md);background:var(--blue-tint);color:var(--blue);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.page-head-icon .icon{width:25px;height:25px}
+.page-head > div:not(.page-head-icon){flex:1;min-width:0}
+.page-head-desc{font-size:.86rem;color:var(--muted);margin-top:5px;max-width:62ch;line-height:1.55}
+.heading-input{
+  font-family:var(--font-display);font-weight:700;color:var(--ink);background:transparent;border:none;outline:none;
+  width:100%;cursor:default;
+}
+.heading-input.h1-style{font-size:1.7rem}
+.heading-input.editable{cursor:text;border-bottom:2px dashed var(--blue);padding-bottom:2px}
+.heading-input.heading-static{display:block;white-space:normal;word-break:break-word;line-height:1.3;margin:0}
+.rf-title-wrap{flex:1;min-width:0}
+.flag-head{align-items:center}
+.flag-head-meta{display:flex;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+.inline-edit-field{display:flex;align-items:center;gap:6px;font-size:.74rem;font-weight:700;color:var(--muted)}
+.inline-edit-field select,.inline-edit-field input{
+  border:1px solid var(--border-strong);border-radius:6px;padding:4px 7px;font-size:.78rem;background:var(--surface);color:var(--ink);
+}
+.inline-edit-field input[type=number]{width:64px}
+
+/* ── Scheme card grid (Category page) ───────────────────────────────── */
+.scheme-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.scheme-card-link{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;
+  display:flex;flex-direction:column;gap:10px;box-shadow:var(--shadow-sm);border-top:4px solid var(--accent,var(--blue));
+  transition:transform .16s ease,box-shadow .16s ease;
+}
+.scheme-card-link:hover{transform:translateY(-3px);box-shadow:var(--shadow)}
+.scheme-card-icon{width:40px;height:40px;border-radius:var(--radius-sm);background:var(--blue-tint);color:var(--accent,var(--blue));display:flex;align-items:center;justify-content:center}
+.scheme-card-icon .icon{width:21px;height:21px}
+.scheme-card-link h3{font-size:.95rem;color:var(--ink);line-height:1.35}
+.scheme-card-link p{font-size:.78rem;color:var(--muted);line-height:1.5;flex:1}
+.scheme-card-foot{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.flag-count-chip{font-size:.68rem;font-weight:700;color:var(--ink-soft);background:var(--surface-alt);padding:3px 9px;border-radius:var(--radius-pill);align-self:flex-start}
+
+/* ── Flag card grid (Scheme page) ───────────────────────────────────── */
+.flag-card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.flag-card{
+  position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:18px 18px 16px;display:flex;flex-direction:column;gap:12px;box-shadow:var(--shadow-sm);
+  transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;overflow:hidden;
+}
+.flag-card:hover{transform:translateY(-3px);box-shadow:var(--shadow);border-color:var(--border-strong)}
+.flag-card h3{font-size:.88rem;color:var(--ink);line-height:1.4;padding-right:20px}
+.flag-card-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto}
+
+/* ── Description / tables ───────────────────────────────────────────── */
+.flag-description{
+  width:100%;min-height:96px;resize:vertical;background:var(--surface-alt);border:1px solid var(--border);
+  border-radius:var(--radius-md);padding:14px 16px;font-size:.87rem;line-height:1.65;color:var(--ink);outline:none;
+  cursor:default;font-family:var(--font-body);
+}
+.flag-description.editable{cursor:text;border-color:var(--blue);background:var(--surface)}
+.flag-description.scheme-desc{min-height:56px;font-size:.86rem;margin-top:8px;max-width:70ch}
+
+/* ── Attachments / verification (compact side layout) ─────────────────── */
+.attach-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:16px;align-items:start}
+@media (max-width:760px){ .attach-layout{grid-template-columns:1fr} }
+
+.attach-side{display:flex;flex-direction:column;gap:10px}
+.upload-box-sm{
+  border:1.5px dashed var(--border-strong);border-radius:var(--radius-sm);
+  padding:10px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;background:var(--surface-alt);
+}
+.upload-box-sm:hover{border-color:var(--blue);background:var(--blue-tint)}
+.upload-box-sm .icon{width:18px;height:18px;color:var(--muted);margin:0 auto 3px}
+.upload-box-sm-text{font-size:.7rem;color:var(--ink-soft);font-weight:600;line-height:1.3}
+.upload-box-sm-sub{font-size:.6rem;color:var(--muted);margin-top:1px}
+.upload-box-sm input[type=file]{display:none}
+
+.sheet-col-controls{display:flex;flex-direction:column;gap:6px;padding:8px 10px;background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.sheet-col-controls label{display:flex;flex-direction:column;gap:2px;font-size:.66rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.sheet-col-controls select{font-size:.76rem;padding:5px 6px;border-radius:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink)}
+
+.attachment-chip{
+  display:flex;align-items:center;gap:7px;padding:7px 9px;background:var(--surface-alt);
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+}
+.attachment-chip .icon{width:15px;height:15px;color:var(--blue);flex-shrink:0}
+.attachment-chip-name{flex:1;font-size:.72rem;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.attachment-chip-meta{font-size:.62rem;color:var(--muted);flex-shrink:0}
+.attachment-chip-actions{display:flex;gap:2px;flex-shrink:0}
+.attachment-chip button{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .15s,color .15s}
+.attachment-chip button:hover{background:var(--blue-tint);color:var(--blue)}
+.attachment-chip button.danger:hover{background:var(--high-bg);color:var(--high)}
+.attachment-chip button .icon{width:13px;height:13px;color:inherit}
+
+/* Compact conversion tile (under description, per flag) */
+.conv-tile{
+  display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);margin-top:10px;
+}
+.conv-tile-ring{position:relative;width:54px;height:54px;flex-shrink:0}
+.conv-tile-ring svg{width:54px;height:54px;transform:rotate(-90deg)}
+.conv-tile-ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:.74rem;font-weight:700;color:var(--ink)}
+.conv-tile-body{flex:1;min-width:0}
+.conv-tile-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:4px}
+.conv-tile-stats{display:flex;gap:12px;flex-wrap:wrap;font-size:.74rem}
+.conv-tile-stats span strong{font-family:var(--font-mono)}
+.conv-tile-stats .s-finding strong{color:var(--high)}
+.conv-tile-stats .s-noissue strong{color:var(--low)}
+.conv-tile-stats .s-outstanding strong{color:var(--gold)}
+.conv-tile-empty{font-size:.78rem;color:var(--muted);margin-top:8px}
+
+/* Scheme-level rolled-up conversion tile */
+.scheme-conv-tile{
+  display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm);margin-bottom:20px;
+}
+.scheme-conv-ring{position:relative;width:72px;height:72px;flex-shrink:0}
+.scheme-conv-ring svg{width:72px;height:72px;transform:rotate(-90deg)}
+.scheme-conv-ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.scheme-conv-ring-label strong{font-family:var(--font-mono);font-size:1rem;font-weight:700;color:var(--ink);line-height:1}
+.scheme-conv-ring-label span{font-size:.55rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:1px}
+.scheme-conv-body{flex:1;display:flex;flex-wrap:wrap;gap:18px}
+.scheme-conv-stat{display:flex;flex-direction:column;gap:1px}
+.scheme-conv-stat .label{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.scheme-conv-stat .value{font-family:var(--font-mono);font-size:1.1rem;font-weight:700;color:var(--ink)}
+.scheme-conv-stat.finding .value{color:var(--high)}
+.scheme-conv-stat.noissue .value{color:var(--low)}
+.scheme-conv-stat.outstanding .value{color:var(--gold)}
+
+.viewer-box{border:1px solid var(--border);border-radius:var(--radius-md);overflow:hidden;margin-top:10px;background:var(--surface)}
+.viewer-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface-alt);border-bottom:1px solid var(--border)}
+.viewer-bar span{font-size:.78rem;font-weight:600;color:var(--ink)}
+.viewer-body{max-height:420px;overflow:auto;padding:12px}
+.viewer-body .pdf-page-canvas{max-width:100%;border:1px solid var(--border);border-radius:4px;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+.mini-table{border-collapse:collapse;width:100%;font-size:.72rem}
+.mini-table th{background:var(--surface-alt);border:1px solid var(--border);padding:5px 8px;text-align:left;font-weight:700;white-space:nowrap}
+.mini-table td{border:1px solid var(--border);padding:4px 8px;white-space:nowrap}
+.mini-table tr:nth-child(even) td{background:var(--surface-alt)}
+.col-found{color:var(--high);font-weight:700}
+.col-noissue{color:var(--low);font-weight:700}
+.col-outstanding{color:var(--gold);font-weight:700}
+
+/* ── Red flag detail: tabbed interface ──────────────────────────────── */
+.rf-header{
+  background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-lg);
+  padding:18px 22px;margin-bottom:16px;
+}
+.rf-header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.rf-id-badge{
+  display:inline-flex;align-items:center;font-family:var(--font-mono);font-size:.72rem;font-weight:700;
+  color:var(--blue-strong);background:var(--blue-tint);padding:2px 9px;border-radius:var(--radius-pill);margin-bottom:6px;
+}
+.rf-status-summary{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.rf-status-item{display:flex;flex-direction:column;gap:1px}
+.rf-status-item .label{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.rf-status-item .value{font-family:var(--font-mono);font-size:1.05rem;font-weight:700;color:var(--ink)}
+.rf-status-item.finding .value{color:var(--high)}
+.rf-status-item.noissue .value{color:var(--low)}
+.rf-status-item.outstanding .value{color:var(--gold)}
+.rf-status-item.conv .value{color:var(--blue-strong)}
+
+.rf-tabs{display:flex;gap:2px;border-bottom:2px solid var(--border);margin-bottom:18px}
+.rf-tab{
+  padding:10px 18px;font-size:.84rem;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;
+  margin-bottom:-2px;transition:color .15s,border-color .15s;
+}
+.rf-tab:hover{color:var(--ink-soft)}
+.rf-tab.active{color:var(--blue-strong);border-bottom-color:var(--blue)}
+
+.rf-filter-row{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;
+  background:var(--surface-alt);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px;
+}
+.rf-filter-field{display:flex;flex-direction:column;gap:4px}
+.rf-filter-field label{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.rf-filter-field select{font-size:.8rem;padding:7px 9px;border-radius:6px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink)}
+
+.rf-summary-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.rf-summary-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);
+  padding:13px 15px;display:flex;flex-direction:column;gap:4px;box-shadow:var(--shadow-sm);
+}
+.rf-summary-card .s-label{font-size:.66rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.rf-summary-card .s-value{font-family:var(--font-mono);font-size:1.5rem;font-weight:700;color:var(--ink)}
+.rf-summary-card.cases{border-left:4px solid var(--blue)}
+.rf-summary-card.finding{border-left:4px solid var(--high)}
+.rf-summary-card.finding .s-value{color:var(--high)}
+.rf-summary-card.noissue{border-left:4px solid var(--low)}
+.rf-summary-card.noissue .s-value{color:var(--low)}
+.rf-summary-card.outstanding{border-left:4px solid var(--gold)}
+.rf-summary-card.outstanding .s-value{color:var(--gold)}
+.rf-summary-card.conv{border-left:4px solid var(--blue-strong)}
+.rf-summary-card.conv .s-value{color:var(--blue-strong)}
+
+.rf-dist-bar{display:flex;height:14px;border-radius:var(--radius-pill);overflow:hidden;border:1px solid var(--border);margin-bottom:6px}
+.rf-dist-seg{height:100%;transition:width .4s ease}
+.rf-dist-seg.finding{background:var(--high)}
+.rf-dist-seg.noissue{background:var(--low)}
+.rf-dist-seg.outstanding{background:var(--gold)}
+.rf-dist-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.74rem;color:var(--muted);margin-bottom:18px}
+.rf-dist-legend span{display:flex;align-items:center;gap:6px}
+.rf-dist-legend .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.rf-dist-legend .dot.finding{background:var(--high)}
+.rf-dist-legend .dot.noissue{background:var(--low)}
+.rf-dist-legend .dot.outstanding{background:var(--gold)}
+
+.status-tag-select{
+  font-size:.72rem;font-weight:700;padding:4px 8px;border-radius:var(--radius-pill);border:1.5px solid transparent;
+  cursor:pointer;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 8px center;background-size:11px;
+  padding-right:24px;
+}
+.status-tag-select.finding{background-color:var(--high-bg);color:var(--high);border-color:var(--high)}
+.status-tag-select.noissue{background-color:var(--low-bg);color:var(--low);border-color:var(--low)}
+.status-tag-select.outstanding{background-color:var(--medium-bg);color:var(--medium);border-color:var(--medium)}
+.status-tag-select:disabled{cursor:default;opacity:.9}
+.rf-table-row-num{color:var(--muted);font-weight:600}
+
+.rf-empty-tab{padding:32px 20px;text-align:center;color:var(--muted);font-size:.86rem}
+
+/* ── Red flag detail: tabbed interface ──────────────────────────────── */
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-md);box-shadow:var(--shadow-sm)}
+.summary-table{width:100%;border-collapse:collapse;font-size:.79rem;background:var(--surface)}
+.summary-table th{
+  background:var(--navy);color:var(--navy-ink);text-align:left;font-weight:700;padding:10px 14px;white-space:nowrap;
+  font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;position:sticky;top:0;
+}
+.summary-table td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--ink-soft);white-space:nowrap;font-variant-numeric:tabular-nums}
+.summary-table tbody tr:nth-child(even) td{background:var(--surface-alt)}
+.summary-table tbody tr:hover td{background:var(--blue-tint)}
+.table-link{display:inline-flex;align-items:center;gap:3px;color:var(--blue);font-weight:700;font-size:.78rem}
+.table-link .icon{width:14px;height:14px}
+
+/* ── Empty states ────────────────────────────────────────────────────── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;
+  padding:46px 24px;border:1.5px dashed var(--border-strong);border-radius:var(--radius-lg);color:var(--muted);
+  grid-column:1/-1;
+}
+.empty-state.compact{padding:24px;border:none}
+.empty-icon{width:38px;height:38px;color:var(--border-strong);margin-bottom:4px}
+.empty-icon .icon{width:38px;height:38px}
+.empty-state h3{font-size:.95rem;color:var(--ink-soft)}
+.empty-state p{font-size:.8rem;max-width:38ch}
+
+/* ── Reports toolbar ─────────────────────────────────────────────────── */
+.report-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.report-search{
+  flex:1;min-width:220px;border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:9px 13px;
+  background:var(--surface);color:var(--ink);font-size:.82rem;
+}
+.chip-group{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  display:flex;align-items:center;gap:6px;font-size:.76rem;font-weight:700;color:var(--ink-soft);
+  background:var(--surface-alt);border:1px solid var(--border);padding:7px 13px;border-radius:var(--radius-pill);
+  transition:all .15s;
+}
+.chip:hover{border-color:var(--border-strong)}
+.chip.active{background:var(--blue);border-color:var(--blue);color:#fff}
+.report-result-count{font-size:.74rem;color:var(--muted);margin:8px 2px 0;display:block}
+
+/* ── Settings ────────────────────────────────────────────────────────── */
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;display:flex;flex-direction:column;gap:16px;box-shadow:var(--shadow-sm)}
+.settings-card.row-card{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+.settings-card p{font-size:.83rem;color:var(--muted)}
+.form-field{display:flex;flex-direction:column;gap:6px;font-size:.78rem;font-weight:700;color:var(--ink-soft)}
+.form-field em{font-weight:500;color:var(--muted);font-style:normal}
+.form-field input[type=text],.form-field input[type=number],.form-field select,.form-field textarea{
+  border:1px solid var(--border-strong);border-radius:var(--radius-sm);padding:10px 12px;font-size:.86rem;
+  background:var(--surface);color:var(--ink);font-weight:500;width:100%;font-family:var(--font-body);
+}
+.form-field textarea{resize:vertical;min-height:70px}
+.form-row{display:flex;gap:14px;flex-wrap:wrap}
+.form-row .form-field{flex:1;min-width:140px}
+.theme-switch-group{display:flex;gap:8px}
+.muted-note{font-size:.78rem;color:var(--muted);line-height:1.55;background:var(--surface-alt);padding:11px 14px;border-radius:var(--radius-sm)}
+.settings-actions{display:flex;gap:10px;flex-wrap:wrap}
+.file-btn{position:relative;overflow:hidden}
+
+/* ── Modals / overlays ───────────────────────────────────────────────── */
+.modal-overlay{
+  display:none;position:fixed;inset:0;background:rgba(10,16,30,.5);backdrop-filter:blur(4px);
+  z-index:300;align-items:flex-start;justify-content:center;padding:9vh 16px 16px;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);width:100%;max-width:480px;
+  box-shadow:var(--shadow-lg);animation:modalIn .18s ease;max-height:80vh;overflow-y:auto;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+.modal-head h3{font-size:1.02rem;color:var(--ink)}
+.modal-body{padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.modal-foot{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px 18px}
+
+.search-modal{max-width:560px;padding:0}
+.search-input-row{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--border);color:var(--muted)}
+.search-input-row .icon{width:19px;height:19px}
+#search-input{flex:1;border:none;outline:none;background:transparent;font-size:.95rem;color:var(--ink)}
+.search-results{max-height:50vh;overflow-y:auto;padding:8px}
+.search-result{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--radius-sm);transition:background .12s}
+.search-result:hover{background:var(--surface-alt)}
+.search-result-type{font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--blue);background:var(--blue-tint);padding:3px 7px;border-radius:5px;flex-shrink:0}
+.search-result-label{font-size:.85rem;color:var(--ink);font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.search-result-sub{font-size:.72rem;color:var(--muted);flex-shrink:0}
+
+/* ── Print (PDF-export fallback) ────────────────────────────────────── */
+@media print{
+  .sidebar,.topbar,.breadcrumb-bar,.export-actions,.add-card,.modal-overlay,.sidebar-scrim{display:none !important}
+  .view-root{padding:0;max-width:none}
+  body{background:#fff}
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width:1100px){
+  .big-card-grid{grid-template-columns:1fr}
+}
+@media (max-width:1000px){
+  .sidebar{position:fixed;left:0;top:0;height:100vh;width:272px;transform:translateX(-100%);box-shadow:var(--shadow-lg)}
+  .app-shell.sidebar-collapsed .sidebar{width:272px}
+  .app-shell.sidebar-mobile-open .sidebar{transform:translateX(0)}
+  .sidebar-collapse-btn{display:none}
+  .mobile-menu-btn{display:flex}
+  .app-shell.sidebar-mobile-open .sidebar-scrim{display:block;position:fixed;inset:0;background:rgba(8,14,26,.5);z-index:55}
+  .topbar-titles h1{font-size:1.12rem}
+}
+@media (max-width:720px){
+  .view-root{padding:18px 16px 48px}
+  .topbar{padding:12px 16px}
+  .breadcrumb-bar{padding:10px 16px}
+  .updated-badge{display:none}
+  .scheme-card-grid,.flag-card-grid{grid-template-columns:1fr}
+  .page-head{flex-wrap:wrap}
+  .section-head.row{flex-direction:column;align-items:flex-start}
+  .report-toolbar{flex-direction:column;align-items:stretch}
+}
+@media (max-width:480px){
+  .topbar-titles p{display:none}
+  .stats-strip{grid-template-columns:repeat(2,1fr)}
+  .btn-edit span:last-child{display:none}
+}
+
+</style>
+<!-- Excel export -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- PDF viewing (uploaded attachments) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- PDF export (with print() fallback in app code if these fail to load) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+
+<body>
+<div id="app-shell" class="app-shell">
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-top">
+      <a href="#/" class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 40 40">
+            <circle cx="20" cy="20" r="18.4" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="20" cy="20" r="13.6" fill="none" stroke="currentColor" stroke-width="1" opacity=".5"/>
+            <path d="M13 20.6l4.6 4.6L27.6 14.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+        <span class="brand-text"><strong>DAC</strong><span>Audit Dashboard</span></span>
+      </a>
+      <button class="sidebar-collapse-btn" onclick="toggleSidebar()" title="Collapse sidebar" aria-label="Collapse sidebar">
+        <span data-icon="chevronLeft"></span>
+      </button>
+    </div>
+
+    <nav id="sidebar-nav" class="sidebar-nav" aria-label="Primary"></nav>
+
+    <div class="sidebar-bottom">
+      <button class="add-category-btn" onclick="openAddModal('category')">
+        <span data-icon="plus"></span><span>Add New Audit Category</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="sidebar-scrim" onclick="toggleMobileSidebar()"></div>
+
+  <div class="content-area">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" onclick="toggleMobileSidebar()" aria-label="Open menu">
+          <span data-icon="menu"></span>
+        </button>
+        <div class="topbar-titles">
+          <h1 id="dashboard-title-text">Data-Led Audit Dashboard</h1>
+          <p id="org-subtitle">Office of the Principal Accountant General (Audit), Nagaland</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="updated-badge" id="last-updated">Sample data</span>
+        <button class="btn-edit" id="edit-toggle" onclick="toggleEditMode()">
+          <span data-icon="pencil"></span><span>Edit Mode</span>
+        </button>
+        <button class="icon-btn" onclick="openSearch()" title="Search" aria-label="Search"><span data-icon="search"></span></button>
+        <a class="icon-btn" href="#/" title="Home" aria-label="Home"><span data-icon="homeIcon"></span></a>
+        <button class="icon-btn" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode" aria-label="Toggle dark mode"><span data-icon="moon"></span></button>
+      </div>
+    </header>
+
+    <div id="breadcrumb-bar" class="breadcrumb-bar" aria-label="Breadcrumb bar"></div>
+
+    <main id="view-root" class="view-root"></main>
+  </div>
+</div>
+
+<!-- Search overlay -->
+<div class="modal-overlay" id="search-overlay" onclick="if(event.target===this) closeSearch()">
+  <div class="modal search-modal">
+    <div class="search-input-row">
+      <span data-icon="search"></span>
+      <input type="text" id="search-input" placeholder="Search schemes, red flags…" oninput="runSearch(this.value)"/>
+      <button class="btn-icon" onclick="closeSearch()" aria-label="Close search"><span data-icon="x"></span></button>
+    </div>
+    <div id="search-results" class="search-results"></div>
+  </div>
+</div>
+
+<!-- Add item modal (category / scheme / red flag) -->
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this) closeAddModal()">
+  <form class="modal add-modal" onsubmit="submitAddModal(event)">
+    <div class="modal-head">
+      <h3 id="add-modal-title">Add New</h3>
+      <button type="button" class="btn-icon" onclick="closeAddModal()" aria-label="Close"><span data-icon="x"></span></button>
+    </div>
+    <div class="modal-body">
+      <label class="form-field">
+        <span>Name</span>
+        <input type="text" id="add-modal-name" required maxlength="120" placeholder=""/>
+      </label>
+      <div class="form-row" id="add-modal-risk-row" style="display:none">
+        <label class="form-field">
+          <span>Cases (placeholder)</span>
+          <input type="number" id="add-modal-cases" min="0" value="0"/>
+        </label>
+      </div>
+      <label class="form-field">
+        <span>Description <em>(optional)</em></span>
+        <textarea id="add-modal-desc" rows="3" placeholder="Short description…"></textarea>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button type="submit" class="btn-primary"><span data-icon="plus"></span><span>Add</span></button>
+    </div>
+  </form>
+</div>
+
+<div class="modal-overlay" id="password-overlay" onclick="if(event.target===this) closePasswordGate()">
+  <form class="modal add-modal" onsubmit="submitPasswordGate(event)" style="max-width:360px">
+    <div class="modal-head">
+      <h3>Admin Password Required</h3>
+      <button type="button" class="btn-icon" onclick="closePasswordGate()" aria-label="Close"><span data-icon="x"></span></button>
+    </div>
+    <div class="modal-body">
+      <label class="form-field">
+        <span>Enter admin password to edit this dashboard</span>
+        <input type="password" id="password-input" required placeholder="Password" autocomplete="current-password"/>
+      </label>
+      <p id="password-error" style="display:none;color:var(--high);font-size:.8rem;margin-top:4px">Incorrect password. Please try again.</p>
+    </div>
+    <div class="modal-foot">
+      <button type="button" class="btn-ghost" onclick="closePasswordGate()">Cancel</button>
+      <button type="submit" class="btn-primary"><span>Unlock</span></button>
+    </div>
+  </form>
+</div>
+
+<script>
+/* ==========================================================================
+   ICON SET
+   ----------------------------------------------------------------------
+   A small, self-contained set of stroke icons (no external icon library,
+   no emoji). Every icon shares the same visual language: 24x24 viewBox,
+   currentColor stroke, 1.75 stroke-width, round caps/joins.
+   Usage: ICONS.search  -> returns an <svg> string.
+   ========================================================================== */
+
+const ICONS = {
+  grid: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg>`,
+
+  shieldHeart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l7 2.7v5.4c0 4.6-3 7.9-7 9.4-4-1.5-7-4.8-7-9.4V6.2L12 3.5z"/><path d="M12 15.5s-3.2-1.95-3.2-4.32c0-1.2.95-2.18 2.1-2.18.6 0 1.14.27 1.1.7.0-.43.5-.7 1.1-.7 1.15 0 2.1.98 2.1 2.18 0 2.37-3.2 4.32-3.2 4.32z"/></svg>`,
+
+  briefcase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7.5" width="18" height="12" rx="2"/><path d="M8.5 7.5V6a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v1.5"/><path d="M3 13h18"/><path d="M10.5 13v1.4h3V13"/></svg>`,
+
+  heartPulse: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7.2-4.4-9.8-9.1C.7 8 1.8 4.7 4.8 3.8c2-.6 4 .2 5.1 1.9.4.6.8 1.3 2.1 1.3 1.3 0 1.7-.7 2.1-1.3 1.1-1.7 3.1-2.5 5.1-1.9 3 .9 4.1 4.2 2.6 7.1C19.2 15.6 12 20 12 20z"/><path d="M4.5 11h2.6l1.4-2.6 2 4.6 1.4-2.6h2.6"/></svg>`,
+
+  graduationCap: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 9 12 4.5 21.5 9 12 13.5 2.5 9z"/><path d="M6.5 11v4.8c0 1.2 2.5 2.7 5.5 2.7s5.5-1.5 5.5-2.7V11"/><path d="M21.5 9v6"/></svg>`,
+
+  homeIcon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 11.5 12 4l8.5 7.5"/><path d="M5.5 10v8.5a1 1 0 0 0 1 1H17.5a1 1 0 0 0 1-1V10"/><path d="M10 19.5V14.5h4v5"/></svg>`,
+
+  fileText: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h7l4 4v13a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M13.5 3v4h4"/><path d="M8.5 13h7M8.5 16.5h7M8.5 9.5h2.5"/></svg>`,
+
+  fileSpreadsheet: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h7l4 4v13a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M13.5 3v4h4"/><path d="M8 12.5h8M8 16h8M11 12.5v6"/></svg>`,
+
+  search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.8" cy="10.8" r="6.3"/><path d="M20 20l-4.5-4.5"/></svg>`,
+
+  sun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7"/></svg>`,
+
+  moon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11z"/></svg>`,
+
+  chevronLeft: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5 8 12l6.5 7"/></svg>`,
+
+  chevronRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 5 16 12l-6.5 7"/></svg>`,
+
+  menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17"/></svg>`,
+
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5v15M4.5 12h15"/></svg>`,
+
+  x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg>`,
+
+  barChart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20.5V13M11.5 20.5V7M19 20.5V10.5"/><path d="M3 20.5h18"/></svg>`,
+
+  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2.05 2.05 0 1 1-2.9 2.9l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.55V20a2.05 2.05 0 1 1-4.1 0v-.1a1.7 1.7 0 0 0-1.1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2.05 2.05 0 1 1-2.9-2.9l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1.03H4a2.05 2.05 0 1 1 0-4.1h.1a1.7 1.7 0 0 0 1.55-1.1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2.05 2.05 0 1 1 2.9-2.9l.06.06a1.7 1.7 0 0 0 1.87.34H10.2A1.7 1.7 0 0 0 11.23 3H11.5a2.05 2.05 0 1 1 4.1 0v.1c0 .66.4 1.25 1.03 1.55.63.27 1.36.14 1.87-.34l.06-.06a2.05 2.05 0 1 1 2.9 2.9l-.06.06a1.7 1.7 0 0 0-.34 1.87v.27c.27.63.86 1.06 1.55 1.06H20a2.05 2.05 0 1 1 0 4.1h-.1a1.7 1.7 0 0 0-1.5 1.03z"/></svg>`,
+
+  download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v11.5M7.5 11l4.5 4.5L16.5 11"/><path d="M4 17v2.5a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>`,
+
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15"/><path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/><path d="M6.5 7l.7 12a1.5 1.5 0 0 0 1.5 1.4h6.6a1.5 1.5 0 0 0 1.5-1.4L17.5 7"/><path d="M10.2 11v6M13.8 11v6"/></svg>`,
+
+  pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14.3 4.8 19.2 9.7 8.4 20.5 3 21l.5-5.4z"/><path d="M12.7 6.4 17.6 11.3"/></svg>`,
+
+  arrowRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h15M13 5.5 19.5 12 13 18.5"/></svg>`,
+
+  alertTriangle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4 21.5 20H2.5L12 4z"/><path d="M12 10v4.2"/><circle cx="12" cy="17.3" r="0.15" fill="currentColor" stroke-width="2.4"/></svg>`,
+
+  flag: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 21V4"/><path d="M5.5 4.5h11l-2.6 3.6 2.6 3.6h-11"/></svg>`,
+
+  building: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3.5" width="14" height="17" rx="1"/><path d="M9 7.5h1.4M13.6 7.5H15M9 11.3h1.4M13.6 11.3H15M9 15.1h1.4M13.6 15.1H15"/><path d="M10 20.5v-4h4v4"/></svg>`,
+
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15.5V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 17v2.5a1.5 1.5 0 0 0 1.5 1.5h13a1.5 1.5 0 0 0 1.5-1.5V17"/></svg>`,
+
+  database: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.2" rx="7.5" ry="2.7"/><path d="M4.5 5.2V18.8c0 1.5 3.4 2.7 7.5 2.7s7.5-1.2 7.5-2.7V5.2"/><path d="M4.5 12c0 1.5 3.4 2.7 7.5 2.7s7.5-1.2 7.5-2.7"/></svg>`,
+
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5 9.5 17.5 19.5 6.5"/></svg>`,
+
+  bell: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 10.5a6 6 0 0 1 12 0c0 4 1.5 5 1.5 5h-15s1.5-1 1.5-5z"/><path d="M10 18.5a2 2 0 0 0 4 0"/></svg>`,
+
+  folder: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.5a1 1 0 0 1 1-1H10l2 2.2h7.5a1 1 0 0 1 1 1V18a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/></svg>`
+};
+
+function icon(name, cls){
+  return (ICONS[name] || ICONS.grid).replace('<svg ', `<svg class="icon ${cls||''}" `);
+}
+/* ==========================================================================
+   DATA LAYER
+   ----------------------------------------------------------------------
+   This is the single source of truth for the whole dashboard. Every page
+   (Home, Category, Scheme, Red Flag Detail, Reports) is rendered from this
+   object — nothing about a scheme or red flag is hard-coded into the HTML
+   anywhere else in the file.
+
+   TO ADD CONTENT LATER, you only need to edit this object:
+     - New audit category  -> push into `categories`
+     - New scheme          -> push into a category's `schemes`
+     - New red flag        -> push into a scheme's `redFlags`
+   The UI (cards, sidebar, breadcrumbs, stats, charts) updates automatically.
+   The same can be done from inside the app itself via the "+ Add" buttons,
+   which write into this same structure and persist it to localStorage.
+
+   NOTE: The figures below (case counts, summary table rows, amounts) are
+   placeholder/illustrative values only, ready to be replaced with actual
+   audit findings. They are not real beneficiary or employee data.
+   ========================================================================== */
+
+const DEFAULT_DATA = {
+  organization: "Office of the Principal Accountant General (Audit), Nagaland",
+  dashboardTitle: "Data-Led Audit Dashboard",
+  adminPassword: "admin123",
+  updatedAt: null, // set on first load
+  categories: [
+    {
+      id: "social-sector",
+      name: "Social Sector Schemes Audit",
+      shortName: "Social Sector Audit",
+      icon: "shieldHeart",
+      description: "Audit coverage of welfare and social-sector schemes implemented across the State.",
+      schemes: [
+        {
+          id: "cmhis-ep",
+          name: "Chief Minister Health Insurance Scheme (CMHIS-EP)",
+          shortName: "CMHIS-EP",
+          icon: "heartPulse",
+          description: "Cashless health insurance scheme covering empanelled-hospital claims and beneficiary enrolment for State Government employees and pensioners.",
+          redFlags: [
+            {
+              id: "duplicate-beneficiary-registrations",
+              name: "Duplicate Beneficiary Registrations",
+              cases: 18,
+              description: "Multiple enrolment IDs traced to the same beneficiary, matched on name, date of birth and family ID — creating risk of duplicate claim settlement against a single individual.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Enrolment Name", "District", "Duplicate Enrolment ID", "Claims Settled (₹)", "Remarks"],
+                rows: [
+                  [1, "CMHIS-EP-04211", "Beneficiary A", "Kohima", "CMHIS-EP-09873", "42,500", "Under verification"],
+                  [2, "CMHIS-EP-03187", "Beneficiary B", "Dimapur", "CMHIS-EP-11420", "18,200", "Under verification"],
+                  [3, "CMHIS-EP-07765", "Beneficiary C", "Mokokchung", "CMHIS-EP-15032", "61,000", "Pending reply from DHS"],
+                  [4, "CMHIS-EP-02290", "Beneficiary D", "Wokha", "CMHIS-EP-08841", "9,750", "Under verification"],
+                  [5, "CMHIS-EP-06654", "Beneficiary E", "Tuensang", "CMHIS-EP-13390", "27,300", "Pending reply from DHS"]
+                ]
+              }
+            },
+            {
+              id: "claims-without-admission-records",
+              name: "Claims Without Valid Admission Records",
+              cases: 11,
+              description: "Claims settled for in-patient treatment packages where the empanelled hospital's admission register shows no corresponding admission for the claimed dates.",
+              summaryTable: {
+                columns: ["S.No", "Claim ID", "Empanelled Hospital", "Package Claimed", "Claim Amount (₹)", "Date of Claim", "Status"],
+                rows: [
+                  [1, "CL-22091", "District Hospital, Kohima", "General Surgery", "38,400", "14-Jun-2025", "Confirmed discrepancy"],
+                  [2, "CL-22147", "Naga Hospital Authority", "Orthopaedic", "76,200", "02-Jul-2025", "Under verification"],
+                  [3, "CL-22203", "EACH Hospital, Dimapur", "Cardiac Care", "1,12,500", "19-Jul-2025", "Confirmed discrepancy"],
+                  [4, "CL-22255", "District Hospital, Mokokchung", "Maternity", "29,800", "05-Aug-2025", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "claims-exceeding-package-ceiling",
+              name: "Claims Exceeding Package Rate Ceiling",
+              cases: 24,
+              description: "Settled claim amounts found higher than the prescribed package rate under the CMHIS-EP rate list for the corresponding treatment category.",
+              summaryTable: {
+                columns: ["S.No", "Claim ID", "Package", "Prescribed Rate (₹)", "Amount Claimed (₹)", "Excess (₹)", "Status"],
+                rows: [
+                  [1, "CL-19044", "Cataract Surgery", "18,000", "24,500", "6,500", "Recovery initiated"],
+                  [2, "CL-19112", "Normal Delivery", "12,000", "16,800", "4,800", "Under verification"],
+                  [3, "CL-19268", "Appendectomy", "22,000", "27,300", "5,300", "Recovery initiated"],
+                  [4, "CL-19301", "Hernia Repair", "20,000", "25,600", "5,600", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "ineligible-beneficiaries-enrolled",
+              name: "Ineligible Beneficiaries Enrolled",
+              cases: 9,
+              description: "Beneficiaries enrolled under the scheme despite not meeting the prescribed employment or pensioner eligibility criteria laid down in the scheme guidelines.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Category Claimed", "Eligibility Issue", "Premium/Claims Paid (₹)", "Status"],
+                rows: [
+                  [1, "CMHIS-EP-05521", "Serving Employee", "Service record not traced", "31,200", "Under verification"],
+                  [2, "CMHIS-EP-06012", "Pensioner", "PPO not on record", "14,500", "Reference sent to DTO"],
+                  [3, "CMHIS-EP-07390", "Dependent", "Dependency certificate missing", "8,900", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "same-day-multiple-claims",
+              name: "Same-Day Multiple Package Claims",
+              cases: 6,
+              description: "Instances of more than one treatment package claimed for the same beneficiary on the same date, across different empanelled hospitals.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Hospitals Involved", "Packages Claimed", "Combined Amount (₹)", "Status"],
+                rows: [
+                  [1, "CMHIS-EP-08842", "2 hospitals, Dimapur", "Diagnostic + OPD", "6,400", "Under verification"],
+                  [2, "CMHIS-EP-09120", "2 hospitals, Kohima", "Diagnostic x2", "5,100", "Under verification"]
+                ]
+              }
+            }
+          ]
+        },
+        {
+          id: "post-matric-scholarship",
+          name: "Post Matric Scholarship",
+          shortName: "Post Matric Scholarship",
+          icon: "graduationCap",
+          description: "Audit of scholarship disbursement to eligible students pursuing post-matriculation courses under the State and Centrally Sponsored Scheme.",
+          redFlags: [
+            {
+              id: "duplicate-applicant-records",
+              name: "Duplicate Applicant Records",
+              cases: 14,
+              description: "The same applicant, matched on Aadhaar / bank account, found registered and disbursed scholarship under more than one application across institutions or academic years.",
+              summaryTable: {
+                columns: ["S.No", "Application ID", "Applicant", "Institution", "Duplicate Application ID", "Amount Disbursed (₹)", "Status"],
+                rows: [
+                  [1, "PMS-3301", "Applicant A", "Kohima Science College", "PMS-3789", "24,000", "Under verification"],
+                  [2, "PMS-3344", "Applicant B", "Nagaland University", "PMS-3902", "31,500", "Recovery initiated"],
+                  [3, "PMS-3410", "Applicant C", "St. Joseph College", "PMS-4011", "18,750", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "ineligible-income-category",
+              name: "Disbursement to Ineligible Income Category",
+              cases: 7,
+              description: "Scholarship released to applicants whose declared family income exceeds the prescribed ceiling for the category claimed.",
+              summaryTable: {
+                columns: ["S.No", "Application ID", "Applicant", "Income Declared (₹)", "Prescribed Ceiling (₹)", "Amount Disbursed (₹)", "Status"],
+                rows: [
+                  [1, "PMS-2904", "Applicant D", "3,40,000", "2,50,000", "22,400", "Under verification"],
+                  [2, "PMS-2977", "Applicant E", "2,95,000", "2,50,000", "19,800", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "attendance-disbursement-mismatch",
+              name: "Attendance–Disbursement Mismatch",
+              cases: 21,
+              description: "Scholarship amounts released for academic terms where institutional attendance records show attendance below the minimum prescribed percentage.",
+              summaryTable: {
+                columns: ["S.No", "Application ID", "Institution", "Attendance (%)", "Required (%)", "Amount Disbursed (₹)", "Status"],
+                rows: [
+                  [1, "PMS-3552", "Kohima Science College", "58", "75", "16,200", "Under verification"],
+                  [2, "PMS-3601", "Fazl Ali College", "63", "75", "14,900", "Under verification"],
+                  [3, "PMS-3678", "Nagaland University", "49", "75", "21,000", "Reference sent to institution"]
+                ]
+              }
+            },
+            {
+              id: "institution-not-on-approved-list",
+              name: "Institution Not on Approved List",
+              cases: 5,
+              description: "Disbursements made for courses pursued at institutions not appearing on the State's approved institution list for the relevant academic year.",
+              summaryTable: {
+                columns: ["S.No", "Application ID", "Institution Claimed", "Course", "Amount Disbursed (₹)", "Status"],
+                rows: [
+                  [1, "PMS-4102", "Unlisted Private Institute", "Diploma — Computer Apps.", "12,000", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "delayed-disbursement",
+              name: "Disbursement Delayed Beyond Academic Year",
+              cases: 33,
+              description: "Sanctioned scholarship amounts disbursed more than one academic year after the sanction date, against the scheme's prescribed disbursement timeline.",
+              summaryTable: {
+                columns: ["S.No", "Application ID", "Sanction Date", "Disbursement Date", "Delay (Months)", "Amount (₹)"],
+                rows: [
+                  [1, "PMS-2710", "18-Mar-2023", "27-Jun-2024", "15", "17,400"],
+                  [2, "PMS-2766", "22-Apr-2023", "11-Aug-2024", "16", "21,000"]
+                ]
+              }
+            }
+          ]
+        },
+        {
+          id: "pm-awaas-yojana-gramin",
+          name: "PM Awaas Yojana (Gramin)",
+          shortName: "PM Awaas Yojana (Gramin)",
+          icon: "homeIcon",
+          description: "Audit of beneficiary selection, fund release and construction progress under the rural housing scheme.",
+          redFlags: [
+            {
+              id: "beneficiary-owns-pucca-house",
+              name: "Beneficiary Already Owns a Pucca House",
+              cases: 12,
+              description: "Cross-verification with land and property records indicates the selected beneficiary already owns a pucca (permanent) house, contrary to the scheme's eligibility criteria.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Name", "Village/Block", "Installments Released (₹)", "Status"],
+                rows: [
+                  [1, "PMAYG-7710", "Beneficiary F", "Chiephobozou Block", "1,20,000", "Under verification"],
+                  [2, "PMAYG-7765", "Beneficiary G", "Tseminyu Block", "80,000", "Reference sent to BDO"]
+                ]
+              }
+            },
+            {
+              id: "installments-without-geotag",
+              name: "Installments Released Without Geo-tagged Evidence",
+              cases: 19,
+              description: "Subsequent installments released against construction stages for which the mandatory geo-tagged progress photograph is missing from the scheme's monitoring system.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Installment No.", "Amount Released (₹)", "Geo-tag Status", "Status"],
+                rows: [
+                  [1, "PMAYG-6601", "2nd", "40,000", "Missing", "Under verification"],
+                  [2, "PMAYG-6644", "3rd", "40,000", "Missing", "Under verification"],
+                  [3, "PMAYG-6709", "2nd", "40,000", "Missing", "Reference sent to BDO"]
+                ]
+              }
+            },
+            {
+              id: "construction-incomplete",
+              name: "Construction Incomplete Beyond Sanctioned Timeline",
+              cases: 27,
+              description: "Houses sanctioned more than 24 months ago with construction recorded as incomplete, exceeding the scheme's prescribed completion timeline.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Sanction Date", "Construction Stage", "Months Elapsed", "Status"],
+                rows: [
+                  [1, "PMAYG-5510", "11-Feb-2023", "Lintel level", "28", "Under verification"],
+                  [2, "PMAYG-5566", "30-Mar-2023", "Foundation", "27", "Reference sent to BDO"]
+                ]
+              }
+            },
+            {
+              id: "scheme-overlap",
+              name: "Beneficiary Overlap With Other Housing Schemes",
+              cases: 8,
+              description: "Beneficiaries identified as having also received housing assistance under another Central or State housing scheme for the same dwelling unit.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Other Scheme Availed", "Amount Under PMAY-G (₹)", "Amount Under Other Scheme (₹)", "Status"],
+                rows: [
+                  [1, "PMAYG-4410", "State Rural Housing Scheme", "1,20,000", "95,000", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "utilization-certificate-pending",
+              name: "Fund Utilization Certificate Not Submitted",
+              cases: 31,
+              description: "Beneficiaries who have received the full installment amount but have not submitted the prescribed fund utilization certificate to the implementing agency.",
+              summaryTable: {
+                columns: ["S.No", "Beneficiary ID", "Total Amount Released (₹)", "Due Date for UC", "Days Overdue", "Status"],
+                rows: [
+                  [1, "PMAYG-3301", "1,20,000", "15-Jan-2026", "92", "Reminder issued"],
+                  [2, "PMAYG-3355", "1,20,000", "02-Feb-2026", "74", "Reminder issued"]
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: "establishment",
+      name: "Establishment Audit",
+      shortName: "Establishment Audit",
+      icon: "briefcase",
+      description: "Audit of establishment matters including pay, allowances and personnel records processed across drawing and disbursing offices.",
+      schemes: [
+        {
+          id: "epay-bill-system",
+          name: "E-Pay Bill System",
+          shortName: "E-Pay Bill System",
+          icon: "fileText",
+          description: "Audit of pay, allowances and establishment-related transactions processed through the E-Pay Bill System.",
+          redFlags: [
+            {
+              id: "salary-beyond-superannuation",
+              name: "Salary Drawn Beyond Date of Superannuation",
+              cases: 6,
+              description: "Pay and allowances continued to be drawn through the E-Pay Bill System for employees beyond their recorded date of superannuation.",
+              summaryTable: {
+                columns: ["S.No", "Employee Code", "Designation", "Date of Superannuation", "Months Overdrawn", "Amount (₹)", "Status"],
+                rows: [
+                  [1, "EMP-11023", "UDC", "30-Apr-2025", "4", "1,84,000", "Recovery initiated"],
+                  [2, "EMP-11187", "Driver", "31-Jul-2025", "2", "76,000", "Under verification"]
+                ]
+              }
+            },
+            {
+              id: "duplicate-bank-pan-records",
+              name: "Duplicate PAN/Bank Account Across Records",
+              cases: 9,
+              description: "The same PAN or bank account number found linked to more than one active employee record, indicating possible duplicate or ghost entries in the establishment database.",
+              summaryTable: {
+                columns: ["S.No", "Employee Code", "Name", "Duplicate Linked To", "Monthly Pay (₹)", "Status"],
+                rows: [
+                  [1, "EMP-10044", "Employee H", "EMP-10391", "42,300", "Under verification"],
+                  [2, "EMP-10122", "Employee I", "EMP-10560", "38,750", "Reference sent to DDO"]
+                ]
+              }
+            },
+            {
+              id: "increment-without-dpc-order",
+              name: "Increment Drawn Without DPC/Order on Record",
+              cases: 15,
+              description: "Annual increments and consequential pay revisions drawn in the bill system without a corresponding Departmental Promotion Committee order or sanction on file.",
+              summaryTable: {
+                columns: ["S.No", "Employee Code", "Designation", "Increment Date", "Revised Pay (₹)", "Status"],
+                rows: [
+                  [1, "EMP-12290", "Sub-Inspector", "01-Jul-2025", "54,200", "Order called for"],
+                  [2, "EMP-12355", "Assistant", "01-Jul-2025", "39,800", "Order called for"]
+                ]
+              }
+            },
+            {
+              id: "excess-hra-ta-claimed",
+              name: "Excess HRA/TA Claimed Against Entitlement",
+              cases: 22,
+              description: "House Rent Allowance or Transport Allowance drawn at rates higher than the entitlement applicable to the employee's pay level and place of posting.",
+              summaryTable: {
+                columns: ["S.No", "Employee Code", "Allowance Type", "Entitled Rate (₹)", "Amount Drawn (₹)", "Excess (₹)"],
+                rows: [
+                  [1, "EMP-13310", "HRA", "4,500", "6,750", "2,250"],
+                  [2, "EMP-13412", "TA", "1,800", "3,200", "1,400"]
+                ]
+              }
+            },
+            {
+              id: "leave-encashment-excess",
+              name: "Leave Encashment Exceeding Eligible Balance",
+              cases: 4,
+              description: "Leave encashment payments processed for a number of days exceeding the employee's recorded leave account balance at the time of encashment.",
+              summaryTable: {
+                columns: ["S.No", "Employee Code", "Leave Balance (Days)", "Days Encashed", "Excess Days", "Amount (₹)"],
+                rows: [
+                  [1, "EMP-14087", "240", "300", "60", "72,000"]
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+};
+/* ==========================================================================
+   APPLICATION LOGIC
+   ----------------------------------------------------------------------
+   Sections:
+     1. State & persistence
+     2. Small helpers (escape, slugify, lookups, stats)
+     3. Router (hash-based, no page reloads)
+     4. Shell rendering (sidebar, header, breadcrumb)
+     5. View renderers (home, category, scheme, flag, reports, settings)
+     6. Shared UI builders (badges, cards, empty states)
+     7. CRUD (add / rename / delete category, scheme, red flag)
+     8. Export to Excel / PDF
+     9. Search overlay
+    10. Theme + sidebar collapse
+    11. Init
+   ========================================================================== */
+
+/* ---------- 1. State & persistence -------------------------------------- */
+const STORAGE_KEY = 'dac-dashboard-data-v1';
+const THEME_KEY = 'dac-dashboard-theme';
+const SIDEBAR_KEY = 'dac-dashboard-sidebar-collapsed';
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const parsed = JSON.parse(raw);
+      if(parsed && Array.isArray(parsed.categories)) return migrateData(parsed);
+    }
+  }catch(e){ console.warn('Saved data could not be read, starting from sample data.', e); }
+  return migrateData(JSON.parse(JSON.stringify(DEFAULT_DATA)));
+}
+function migrateData(d){
+  if(!d.adminPassword) d.adminPassword = 'admin123';
+  d.categories.forEach(c => c.schemes.forEach(s => {
+    if(s.description === undefined) s.description = '';
+    s.redFlags.forEach(f => {
+      if(!f.attachments) f.attachments = { excel:null, pdfs:[] };
+      if(!f.attachments.pdfs) f.attachments.pdfs = [];
+      if(!f.verification) f.verification = { total:0, auditFinding:0, noIssue:0, outstanding:0, conversionPct:0 };
+      const ex = f.attachments.excel;
+      if(ex){
+        if(!ex.sheetNames) ex.sheetNames = [ex.sheetName || 'Sheet1'];
+        if(!ex.sheetsData) ex.sheetsData = { [ex.sheetName || 'Sheet1']: ex.aoa || [] };
+        if(ex.verifyColIndex === undefined) ex.verifyColIndex = findVerificationColumn((ex.aoa && ex.aoa[0]) || []);
+      }
+    });
+  }));
+  return d;
+}
+
+function saveData(){
+  data.updatedAt = new Date().toISOString();
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  catch(e){ console.warn('Could not save dashboard data.', e); }
+  updateLastUpdatedLabel();
+}
+
+let data = loadData();
+let editMode = false;
+let pwUnlocked = false;
+let rfActiveTab = 'verification';
+let theme = (function(){ try{ return localStorage.getItem(THEME_KEY) || 'light'; }catch(e){ return 'light'; } })();
+let sidebarCollapsed = (function(){ try{ return localStorage.getItem(SIDEBAR_KEY) === '1'; }catch(e){ return false; } })();
+let currentRoute = { view:'home' };
+let reportFilter = { q:'' };
+let addModalCtx = null;
+
+/* ---------- 2. Helpers ---------------------------------------------------- */
+function escHtml(s){
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function slugify(str){
+  return (str || '').toString().toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g,'-').replace(/(^-+|-+$)/g,'') || 'item';
+}
+function uniqueSlug(base, existingIds){
+  let id = slugify(base), n = 2;
+  while(existingIds.includes(id)){ id = `${slugify(base)}-${n++}`; }
+  return id;
+}
+function findCategory(id){ return data.categories.find(c => c.id === id); }
+function findScheme(catId, schemeId){ const c = findCategory(catId); return c && c.schemes.find(s => s.id === schemeId); }
+function findFlag(catId, schemeId, flagId){ const s = findScheme(catId, schemeId); return s && s.redFlags.find(f => f.id === flagId); }
+
+function computeCategoryStats(c){
+  let flagCount = 0, cases = 0;
+  c.schemes.forEach(s => { flagCount += s.redFlags.length; s.redFlags.forEach(f => { cases += Number(f.cases) || 0; }); });
+  return { flagCount, cases };
+}
+function computeSchemeStats(s){
+  let cases = 0;
+  s.redFlags.forEach(f => { cases += Number(f.cases) || 0; });
+  return { flagCount: s.redFlags.length, cases };
+}
+function computeGlobalStats(){
+  let schemes = 0, flags = 0, cases = 0;
+  data.categories.forEach(c => {
+    schemes += c.schemes.length;
+    c.schemes.forEach(s => { flags += s.redFlags.length; s.redFlags.forEach(f => { cases += Number(f.cases) || 0; }); });
+  });
+  return { categories: data.categories.length, schemes, flags, cases };
+}
+const ACCENTS = ['var(--blue)','var(--gold)','var(--teal)','var(--plum)'];
+function accentForIndex(i){ return ACCENTS[i % ACCENTS.length]; }
+
+/* ---------- 3. Router ------------------------------------------------------ */
+function parseHash(){
+  let h = decodeURIComponent(location.hash || '#/');
+  h = h.replace(/^#\/?/, '');
+  const parts = h.split('/').filter(Boolean);
+  if(parts.length === 0) return { view:'home' };
+  if(parts[0] === 'reports') return { view:'reports' };
+  if(parts[0] === 'settings') return { view:'settings' };
+  if(parts[0] === 'category' && parts[1]) return { view:'category', categoryId: parts[1] };
+  if(parts[0] === 'scheme' && parts[1] && parts[2]) return { view:'scheme', categoryId: parts[1], schemeId: parts[2] };
+  if(parts[0] === 'flag' && parts[1] && parts[2] && parts[3]) return { view:'flag', categoryId: parts[1], schemeId: parts[2], flagId: parts[3] };
+  return { view:'home' };
+}
+function navigateTo(hash){ location.hash = hash; }
+
+function renderRoute(skipAnim){
+  const route = parseHash();
+  if(route.view === 'flag' && (!currentRoute || currentRoute.view !== 'flag' || currentRoute.flagId !== route.flagId)){
+    rfActiveTab = 'verification';
+  }
+  currentRoute = route;
+  const root = document.getElementById('view-root');
+  if(!root) return;
+  closeMobileSidebar();
+
+  const paint = () => {
+    let html = '';
+    switch(route.view){
+      case 'home': html = renderHomeView(); break;
+      case 'category': html = renderCategoryView(route.categoryId); break;
+      case 'scheme': html = renderSchemeView(route.categoryId, route.schemeId); break;
+      case 'flag': html = renderFlagView(route.categoryId, route.schemeId, route.flagId); break;
+      case 'reports': html = renderReportsView(); break;
+      case 'settings': html = renderSettingsView(); break;
+      default: html = renderHomeView();
+    }
+    root.innerHTML = html;
+    hydrateIcons(root);
+    renderBreadcrumb(route);
+    renderSidebarNav();
+    document.title = titleForRoute(route);
+    root.classList.remove('view-fade-out');
+    if(!skipAnim){
+      root.classList.add('view-fade-in');
+      window.scrollTo(0,0);
+      setTimeout(() => root.classList.remove('view-fade-in'), 240);
+    }
+  };
+
+  if(skipAnim){ paint(); return; }
+  root.classList.add('view-fade-out');
+  setTimeout(paint, 110);
+}
+
+function titleForRoute(route){
+  const base = data.dashboardTitle || 'Data-Led Audit Dashboard';
+  if(route.view === 'home') return base;
+  if(route.view === 'reports') return `Reports · ${base}`;
+  if(route.view === 'settings') return `Settings · ${base}`;
+  const cat = route.categoryId && findCategory(route.categoryId);
+  if(route.view === 'category') return cat ? `${cat.shortName||cat.name} · ${base}` : base;
+  const scheme = cat && route.schemeId && findScheme(route.categoryId, route.schemeId);
+  if(route.view === 'scheme') return scheme ? `${scheme.shortName||scheme.name} · ${base}` : base;
+  const flag = scheme && route.flagId && findFlag(route.categoryId, route.schemeId, route.flagId);
+  if(route.view === 'flag') return flag ? `${flag.name} · ${base}` : base;
+  return base;
+}
+
+/* ---------- 4. Shell rendering -------------------------------------------- */
+function hydrateIcons(scope){
+  (scope || document).querySelectorAll('[data-icon]').forEach(el => {
+    el.innerHTML = icon(el.getAttribute('data-icon'));
+  });
+}
+
+function renderSidebarNav(){
+  const nav = document.getElementById('sidebar-nav');
+  if(!nav) return;
+  const route = currentRoute;
+  const catLinks = data.categories.map(c => `
+    <a href="#/category/${c.id}" class="nav-item ${route.categoryId === c.id ? 'active':''}" title="${escHtml(c.shortName||c.name)}">
+      <span class="nav-icon">${icon(c.icon || 'folder')}</span><span class="nav-label">${escHtml(c.shortName||c.name)}</span>
+    </a>`).join('');
+  nav.innerHTML = `
+    <a href="#/" class="nav-item ${route.view==='home'?'active':''}" title="Dashboard">
+      <span class="nav-icon">${icon('grid')}</span><span class="nav-label">Dashboard</span>
+    </a>
+    ${catLinks}
+    <div class="nav-divider"></div>
+    <a href="#/reports" class="nav-item ${route.view==='reports'?'active':''}" title="Reports">
+      <span class="nav-icon">${icon('barChart')}</span><span class="nav-label">Reports</span>
+    </a>
+    <a href="#/settings" class="nav-item ${route.view==='settings'?'active':''}" title="Settings">
+      <span class="nav-icon">${icon('settings')}</span><span class="nav-label">Settings</span>
+    </a>`;
+}
+
+function renderHeaderMeta(){
+  const t = document.getElementById('dashboard-title-text');
+  if(t) t.textContent = data.dashboardTitle || 'Data-Led Audit Dashboard';
+  const o = document.getElementById('org-subtitle');
+  if(o) o.textContent = data.organization || '';
+}
+
+function updateLastUpdatedLabel(){
+  const el = document.getElementById('last-updated');
+  if(!el) return;
+  if(!data.updatedAt){ el.textContent = 'Sample data · not yet edited'; return; }
+  const d = new Date(data.updatedAt);
+  el.textContent = `Updated ${d.toLocaleDateString([], {day:'2-digit', month:'short'})}, ${d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+}
+
+function renderBreadcrumb(route){
+  const bar = document.getElementById('breadcrumb-bar');
+  if(!bar) return;
+  if(route.view === 'home'){ bar.classList.remove('visible'); bar.innerHTML=''; return; }
+
+  const trail = [{ label:'Dashboard', hash:'#/' }];
+  if(route.view === 'reports') trail.push({ label:'Reports' });
+  else if(route.view === 'settings') trail.push({ label:'Settings' });
+  else{
+    const cat = findCategory(route.categoryId);
+    if(!cat){ bar.classList.remove('visible'); bar.innerHTML=''; return; }
+    trail.push({ label: cat.shortName || cat.name, hash:`#/category/${cat.id}` });
+    if(route.view !== 'category'){
+      const scheme = findScheme(route.categoryId, route.schemeId);
+      if(scheme){
+        trail.push({ label: scheme.shortName || scheme.name, hash:`#/scheme/${cat.id}/${scheme.id}` });
+        if(route.view === 'flag'){
+          const flag = findFlag(route.categoryId, route.schemeId, route.flagId);
+          if(flag) trail.push({ label: flag.name });
+        }
+      }
+    }
+  }
+  bar.classList.add('visible');
+  bar.innerHTML = `
+    <button class="btn-back" onclick="history.back()" title="Go back">${icon('chevronLeft')}<span>Back</span></button>
+    <nav class="breadcrumb" aria-label="Breadcrumb">
+      ${trail.map((t,i) => i < trail.length-1 && t.hash
+        ? `<a href="${t.hash}" class="crumb">${escHtml(t.label)}</a><span class="crumb-sep">${icon('chevronRight')}</span>`
+        : `<span class="crumb current">${escHtml(t.label)}</span>`
+      ).join('')}
+    </nav>`;
+}
+
+/* ---------- 5. View renderers ---------------------------------------------- */
+function renderHomeView(){
+  const stats = computeGlobalStats();
+  const cards = data.categories.map((c,i) => {
+    const cStats = computeCategoryStats(c);
+    return `
+    <a href="#/category/${c.id}" class="big-card" style="--accent:${accentForIndex(i)}">
+      <div class="big-card-icon">${icon(c.icon || 'folder')}</div>
+      <div class="big-card-body">
+        <h3>${escHtml(c.shortName || c.name)}</h3>
+        <p>${escHtml(c.description || '')}</p>
+        <div class="big-card-stats">
+          <span><strong>${c.schemes.length}</strong> scheme${c.schemes.length===1?'':'s'}</span>
+          <span><strong>${cStats.flagCount}</strong> red flag${cStats.flagCount===1?'':'s'}</span>
+            </div>
+      </div>
+      <div class="big-card-arrow">${icon('arrowRight')}</div>
+    </a>`;
+  }).join('');
+
+  return `
+    <section class="stats-strip">
+      ${statCell('Audit Categories', stats.categories)}
+      ${statCell('Schemes Covered', stats.schemes)}
+      ${statCell('Red Flags Raised', stats.flags, 'accent')}
+      ${statCell('Cases Identified', stats.cases)}
+    </section>
+    <section class="view-section">
+      <div class="section-head">
+        <h2>Audit Categories</h2>
+        <p class="section-sub">Select a category to view its schemes and red-flag indicators.</p>
+      </div>
+      <div class="big-card-grid">
+        ${cards}
+        <button class="add-card" onclick="openAddModal('category')">${icon('plus')}<span>Add New Audit Category</span></button>
+      </div>
+    </section>`;
+}
+
+function renderCategoryView(categoryId){
+  const cat = findCategory(categoryId);
+  if(!cat) return notFoundSection('Audit category not found.', 'It may have been removed. Head back to the dashboard to keep going.');
+  const cStats = computeCategoryStats(cat);
+  const schemeCards = cat.schemes.map((s,i) => {
+    const sStats = computeSchemeStats(s);
+    return `
+    <a href="#/scheme/${cat.id}/${s.id}" class="scheme-card-link" style="--accent:${accentForIndex(i)}">
+      <div class="scheme-card-icon">${icon(s.icon || 'folder')}</div>
+      <h3>${escHtml(s.shortName || s.name)}</h3>
+      <p>${escHtml(s.description || '')}</p>
+      <div class="scheme-card-foot">
+        <span class="flag-count-chip">${sStats.flagCount} red flag${sStats.flagCount===1?'':'s'}</span>
+      </div>
+    </a>`;
+  }).join('');
+
+  return `
+    <section class="page-head">
+      <div class="page-head-icon">${icon(cat.icon || 'folder')}</div>
+      <div>
+        ${editableHeading(cat.name, `renameCategory('${cat.id}', this.value)`)}
+        <p class="page-head-desc">${escHtml(cat.description || '')}</p>
+      </div>
+      ${deleteButton(`deleteCategory('${cat.id}')`, 'category')}
+    </section>
+    <section class="stats-strip">
+      ${statCell('Schemes', cat.schemes.length)}
+      ${statCell('Red Flags', cStats.flagCount, 'accent')}
+      ${statCell('Cases Identified', cStats.cases)}
+    </section>
+    <section class="view-section">
+      <div class="section-head"><h2>Schemes</h2></div>
+      <div class="scheme-card-grid">
+        ${schemeCards || emptyState('No schemes yet', 'Add the first scheme to start tracking red flags for this category.')}
+        <button class="add-card" onclick="openAddModal('scheme', {categoryId:'${cat.id}'})">${icon('plus')}<span>Add New Scheme</span></button>
+      </div>
+    </section>`;
+}
+
+function renderSchemeView(categoryId, schemeId){
+  const cat = findCategory(categoryId);
+  const scheme = cat && findScheme(categoryId, schemeId);
+  if(!cat || !scheme) return notFoundSection('Scheme not found.', 'It may have been removed. Head back to the dashboard to keep going.');
+  const sStats = computeSchemeStats(scheme);
+  const flagCards = scheme.redFlags.map(f => `
+    <a href="#/flag/${cat.id}/${scheme.id}/${f.id}" class="flag-card">
+      <h3>${escHtml(f.name)}</h3>
+      <div class="flag-card-foot">
+        <span class="case-count">${f.cases ?? 0} case${(f.cases===1)?'':'s'}</span>
+      </div>
+    </a>`).join('');
+
+  return `
+    <section class="page-head">
+      <div class="page-head-icon">${icon(scheme.icon || 'folder')}</div>
+      <div>
+        ${editableHeading(scheme.name, `renameScheme('${cat.id}','${scheme.id}', this.value)`)}
+        <textarea class="flag-description scheme-desc ${editMode?'editable':''}" ${editMode?'':'readonly'}
+          onchange="updateSchemeDescription('${cat.id}','${scheme.id}', this.value)"
+          placeholder="No description recorded yet.">${escHtml(scheme.description || '')}</textarea>
+      </div>
+      ${deleteButton(`deleteScheme('${cat.id}','${scheme.id}')`, 'scheme')}
+    </section>
+    <section class="stats-strip">
+      ${statCell('Red Flags', sStats.flagCount, 'accent')}
+      ${statCell('Cases Identified', sStats.cases)}
+    </section>
+    ${renderSchemeConversionTile(scheme)}
+    <section class="view-section">
+      <div class="section-head"><h2>Red Flags</h2></div>
+      <div class="flag-card-grid">
+        ${flagCards || emptyState('No red flags yet', 'Add the first red flag identified for this scheme.')}
+        <button class="add-card" onclick="openAddModal('flag', {categoryId:'${cat.id}', schemeId:'${scheme.id}'})">${icon('plus')}<span>Add New Red Flag</span></button>
+      </div>
+    </section>`;
+}
+
+function renderSchemeConversionTile(scheme){
+  let total=0, auditFinding=0, noIssue=0, outstanding=0, withExcel=0;
+  scheme.redFlags.forEach(f => {
+    const v = f.verification;
+    if(f.attachments && f.attachments.excel && v){
+      total += v.total; auditFinding += v.auditFinding; noIssue += v.noIssue; outstanding += v.outstanding;
+      withExcel++;
+    }
+  });
+  if(!withExcel){
+    return `<section class="view-section"><p class="muted-note">No red flags in this scheme have an Excel attachment yet. Upload case data under a red flag's Attachments &amp; Field Verification to see the scheme-wide conversion summary here.</p></section>`;
+  }
+  const pct = total>0 ? Math.round((auditFinding/total)*1000)/10 : 0;
+  return `
+    <section class="view-section">
+      <div class="section-head"><h2>Scheme Conversion Summary</h2></div>
+      <div class="rf-summary-cards">
+        <div class="rf-summary-card cases"><span class="s-label">Red Flags w/ Data</span><span class="s-value">${withExcel}/${scheme.redFlags.length}</span></div>
+        <div class="rf-summary-card cases"><span class="s-label">Total Cases</span><span class="s-value">${total}</span></div>
+        <div class="rf-summary-card finding"><span class="s-label">Audit Finding</span><span class="s-value">${auditFinding}</span></div>
+        <div class="rf-summary-card noissue"><span class="s-label">No Issue</span><span class="s-value">${noIssue}</span></div>
+        <div class="rf-summary-card outstanding"><span class="s-label">Outstanding</span><span class="s-value">${outstanding}</span></div>
+        <div class="rf-summary-card conv"><span class="s-label">Conversion</span><span class="s-value">${pct}%</span></div>
+      </div>
+    </section>`;
+}
+
+function buildSummaryTableHtml(flag){
+  const ex = flag.attachments && flag.attachments.excel;
+  if(ex && Array.isArray(ex.aoa) && ex.aoa.length){
+    const header = ex.aoa[0] || [];
+    const rows = ex.aoa.slice(1).filter(r => r.some(c => String(c||'').trim()!==''));
+    if(!rows.length) return emptyState('No case rows found', 'The attached Excel sheet has no data rows below the header.');
+    const verifyCol = (ex.verifyColIndex === undefined) ? computeVerificationStats(ex.aoa).colIndex : ex.verifyColIndex;
+    const rowsHtml = rows.map(r => {
+      const cells = header.map((_,i) => {
+        const raw = String(r[i] ?? '').trim();
+        let cls = '';
+        let display = raw;
+        if(i === verifyCol){
+          const v = raw.toLowerCase();
+          if(v==='yes'||v==='y'){ cls='col-found'; display = raw || 'Yes'; }
+          else if(v==='no'||v==='n'){ cls='col-noissue'; display = raw || 'No'; }
+          else { cls='col-outstanding'; display = 'Outstanding'; }
+        }
+        return `<td class="${cls}">${escHtml(display)}</td>`;
+      }).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    return `
+      <p class="muted-note" style="margin-bottom:10px">Sourced from attached Excel file <strong>${escHtml(ex.name)}</strong> (Sheet: ${escHtml(ex.sheetName||'')}). To edit case data, update the Excel sheet and re-upload it under Attachments &amp; Field Verification.</p>
+      <div class="table-wrap">
+        <table class="summary-table">
+          <thead><tr>${header.map(h => `<th>${escHtml(String(h))}</th>`).join('')}</tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>`;
+  }
+  const table = flag.summaryTable || { columns:[], rows:[] };
+  return table.rows.length ? `
+    <div class="table-wrap">
+      <table class="summary-table">
+        <thead><tr>${table.columns.map(c => `<th>${escHtml(c)}</th>`).join('')}</tr></thead>
+        <tbody>${table.rows.map(r => `<tr>${r.map(cell => `<td>${escHtml(String(cell))}</td>`).join('')}</tr>`).join('')}</tbody>
+      </table>
+    </div>` : emptyState('No cases recorded yet', 'Upload an Excel sheet under Attachments &amp; Field Verification, or add rows to this red flag\u2019s summary table.');
+}
+
+function renderFlagView(categoryId, schemeId, flagId){
+  const cat = findCategory(categoryId);
+  const scheme = cat && findScheme(categoryId, schemeId);
+  const flag = scheme && findFlag(categoryId, schemeId, flagId);
+  if(!cat || !scheme || !flag) return notFoundSection('Red flag not found.', 'It may have been removed. Head back to the dashboard to keep going.');
+  const tab = rfActiveTab;
+
+  return `
+    <section class="page-head flag-head" style="display:none"></section>
+
+    <div class="rf-header">
+      <div class="rf-header-top">
+        <div class="rf-title-wrap">
+          ${editableHeading(flag.name, `renameFlag('${cat.id}','${scheme.id}','${flag.id}', this.value)`)}
+        </div>
+        ${deleteButton(`deleteFlag('${cat.id}','${scheme.id}','${flag.id}')`, 'red flag')}
+      </div>
+    </div>
+
+    <div class="rf-tabs">
+      <button type="button" class="rf-tab ${tab==='findings'?'active':''}" onclick="setRfTab('findings')">Findings</button>
+      <button type="button" class="rf-tab ${tab==='verification'?'active':''}" onclick="setRfTab('verification')">Case Verification</button>
+      <button type="button" class="rf-tab ${tab==='attachments'?'active':''}" onclick="setRfTab('attachments')">Attachments</button>
+    </div>
+
+    ${tab==='findings' ? renderFindingsTab(cat, scheme, flag) : ''}
+    ${tab==='verification' ? renderVerificationTab(cat, scheme, flag) : ''}
+    ${tab==='attachments' ? renderAttachmentsSection(cat, scheme, flag) : ''}
+  `;
+}
+
+function setRfTab(tab){
+  rfActiveTab = tab;
+  renderRoute(true);
+}
+
+function renderFindingsTab(cat, scheme, flag){
+  return `
+    <section class="view-section">
+      <div class="section-head"><h2>Description</h2></div>
+      <textarea class="flag-description ${editMode?'editable':''}" ${editMode?'':'readonly'}
+        onchange="updateFlagDescription('${cat.id}','${scheme.id}','${flag.id}', this.value)"
+        placeholder="No description recorded yet.">${escHtml(flag.description || '')}</textarea>
+    </section>
+    <section class="view-section">
+      <div class="section-head row">
+        <h2>Summary Table</h2>
+        <div class="export-actions">
+          <button class="btn-outline" onclick="exportFlagToExcel('${cat.id}','${scheme.id}','${flag.id}')">${icon('fileSpreadsheet')}<span>Export to Excel</span></button>
+          <button class="btn-outline" onclick="exportFlagToPDF('${cat.id}','${scheme.id}','${flag.id}')">${icon('fileText')}<span>Export to PDF</span></button>
+        </div>
+      </div>
+      ${buildSummaryTableHtml(flag)}
+    </section>`;
+}
+
+function renderVerificationTab(cat, scheme, flag){
+  const att = flag.attachments || { excel:null, pdfs:[] };
+  const ex = att.excel;
+  const v = flag.verification || { total:0, auditFinding:0, noIssue:0, outstanding:0, conversionPct:0 };
+
+  if(!ex){
+    return `
+      <section class="view-section">
+        <div class="rf-empty-tab">
+          <p>No Excel file linked to this red flag yet.</p>
+          <p class="muted-note" style="margin-top:6px">Go to the <strong>Attachments</strong> tab to upload a register file, then return here to verify cases.</p>
+        </div>
+      </section>`;
+  }
+
+  const filterRow = `
+    <div class="rf-filter-row">
+      <div class="rf-filter-field">
+        <label>Register File</label>
+        <select disabled><option>${escHtml(ex.name)}</option></select>
+      </div>
+      <div class="rf-filter-field">
+        <label>Sheet</label>
+        <select onchange="changeExcelSheet('${cat.id}','${scheme.id}','${flag.id}', this.value)" ${editMode?'':'disabled'}>
+          ${(ex.sheetNames||[ex.sheetName]).map(sn => `<option value="${escHtml(sn)}" ${sn===ex.sheetName?'selected':''}>${escHtml(sn)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="rf-filter-field">
+        <label>Verification Column</label>
+        <select onchange="changeVerifyColumn('${cat.id}','${scheme.id}','${flag.id}', this.value)" ${editMode?'':'disabled'}>
+          <option value="" ${ex.verifyColIndex===-1?'selected':''}>None (all outstanding)</option>
+          ${(ex.aoa && ex.aoa[0] ? ex.aoa[0] : []).map((h,i) => `<option value="${i}" ${ex.verifyColIndex===i?'selected':''}>${escHtml(String(h)||`Column ${i+1}`)}</option>`).join('')}
+        </select>
+      </div>
+    </div>`;
+
+  const summaryCards = `
+    <div class="rf-summary-cards">
+      <div class="rf-summary-card cases"><span class="s-label">Cases</span><span class="s-value">${v.total}</span></div>
+      <div class="rf-summary-card finding"><span class="s-label">Findings</span><span class="s-value">${v.auditFinding}</span></div>
+      <div class="rf-summary-card noissue"><span class="s-label">No Issue</span><span class="s-value">${v.noIssue}</span></div>
+      <div class="rf-summary-card outstanding"><span class="s-label">Outstanding</span><span class="s-value">${v.outstanding}</span></div>
+      <div class="rf-summary-card conv"><span class="s-label">Conversion</span><span class="s-value">${v.conversionPct}%</span></div>
+    </div>`;
+
+  const total = v.total || 1;
+  const fPct = Math.round((v.auditFinding/total)*1000)/10;
+  const nPct = Math.round((v.noIssue/total)*1000)/10;
+  const oPct = Math.max(0, 100 - fPct - nPct);
+  const distBar = `
+    <div class="rf-dist-bar">
+      <div class="rf-dist-seg finding" style="width:${fPct}%"></div>
+      <div class="rf-dist-seg noissue" style="width:${nPct}%"></div>
+      <div class="rf-dist-seg outstanding" style="width:${oPct}%"></div>
+    </div>
+    <div class="rf-dist-legend">
+      <span><span class="dot finding"></span>Finding (${v.auditFinding})</span>
+      <span><span class="dot noissue"></span>No Issue (${v.noIssue})</span>
+      <span><span class="dot outstanding"></span>Outstanding (${v.outstanding})</span>
+    </div>`;
+
+  const caseTableHtml = buildCaseVerificationTable(cat, scheme, flag, ex);
+
+  return `
+    <section class="view-section">
+      ${filterRow}
+      ${summaryCards}
+      ${distBar}
+      ${caseTableHtml}
+    </section>`;
+}
+
+function guessColumnIndex(header, candidates){
+  for(let i=0;i<header.length;i++){
+    const h = String(header[i]||'').trim().toLowerCase();
+    if(candidates.some(c => h.includes(c))) return i;
+  }
+  return -1;
+}
+
+function buildCaseVerificationTable(cat, scheme, flag, ex){
+  const aoa = ex.aoa || [];
+  if(aoa.length < 2) return emptyState('No case rows found', 'The attached Excel sheet has no data rows below the header.');
+  const header = aoa[0] || [];
+  const rows = aoa.slice(1).filter(r => r.some(c => String(c||'').trim()!==''));
+  if(!rows.length) return emptyState('No case rows found', 'The attached Excel sheet has no data rows below the header.');
+
+  const verifyCol = (ex.verifyColIndex === undefined) ? findVerificationColumn(header) : ex.verifyColIndex;
+  const caseIdCol = guessColumnIndex(header, ['case id','case no','case number']);
+  const firCol = guessColumnIndex(header, ['fir number','fir no','fir']);
+
+  const rowsHtml = rows.map((r,ri) => {
+    const caseId = caseIdCol>=0 ? r[caseIdCol] : (r[1] ?? '');
+    const fir = firCol>=0 ? r[firCol] : (r[2] ?? '');
+    const raw = verifyCol>=0 ? String(r[verifyCol]||'').trim().toLowerCase() : '';
+    let statusCls = 'outstanding', statusVal = '';
+    if(raw==='yes'||raw==='y') statusCls='finding';
+    else if(raw==='no'||raw==='n') statusCls='noissue';
+    return `
+      <tr>
+        <td class="rf-table-row-num">${ri+1}</td>
+        <td>${escHtml(String(caseId ?? ''))}</td>
+        <td>${escHtml(String(fir ?? ''))}</td>
+        <td>
+          <select class="status-tag-select ${statusCls}" ${editMode?'':'disabled'}
+            onchange="updateCaseVerificationValue('${cat.id}','${scheme.id}','${flag.id}',${ri},this.value)">
+            <option value="Yes" ${statusCls==='finding'?'selected':''}>Finding</option>
+            <option value="No" ${statusCls==='noissue'?'selected':''}>No Issue</option>
+            <option value="" ${statusCls==='outstanding'?'selected':''}>Outstanding</option>
+          </select>
+        </td>
+      </tr>`;
+  }).join('');
+
+  return `
+    <div class="table-wrap">
+      <table class="summary-table">
+        <thead><tr><th>Serial No</th><th>Case ID</th><th>FIR Number</th><th>Field Verification</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+function updateCaseVerificationValue(catId, schemeId, flagId, rowIdx, value){
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  const ex = flag.attachments && flag.attachments.excel; if(!ex) return;
+  const header = ex.aoa[0] || [];
+  const dataRowIdxs = [];
+  ex.aoa.slice(1).forEach((r,i) => { if(r.some(c => String(c||'').trim()!=='')) dataRowIdxs.push(i+1); });
+  const actualAoaRow = dataRowIdxs[rowIdx];
+  if(actualAoaRow === undefined) return;
+  if(ex.verifyColIndex === undefined || ex.verifyColIndex < 0){
+    // no column chosen yet - create/use a Field Verification column
+    let col = findVerificationColumn(header);
+    if(col < 0){
+      header.push('Field Verification');
+      col = header.length - 1;
+      ex.aoa.forEach((r,i) => { if(i>0 && r.length < header.length) r.push(''); });
+    }
+    ex.verifyColIndex = col;
+  }
+  ex.aoa[actualAoaRow][ex.verifyColIndex] = value;
+  if(ex.sheetsData) ex.sheetsData[ex.sheetName] = ex.aoa;
+  recalcFlagVerification(flag);
+  saveData();
+  renderRoute(true);
+}
+
+function renderAttachmentsSection(cat, scheme, flag){
+  const att = flag.attachments || { excel:null, pdfs:[] };
+  const v = flag.verification || { total:0, auditFinding:0, noIssue:0, outstanding:0, conversionPct:0 };
+  const ex = att.excel;
+
+  const excelChip = ex ? `
+    <div class="attachment-chip">
+      ${icon('fileSpreadsheet')}
+      <span class="attachment-chip-name">${escHtml(ex.name)}</span>
+      <span class="attachment-chip-meta">${v.total} row${v.total===1?'':'s'}</span>
+      <div class="attachment-chip-actions">
+        <button title="View" onclick="viewAttachment('${cat.id}','${scheme.id}','${flag.id}','excel')">${icon('search')}</button>
+        ${editMode ? `<button class="danger" title="Remove" onclick="removeExcelAttachment('${cat.id}','${scheme.id}','${flag.id}')">${icon('trash')}</button>` : ''}
+      </div>
+    </div>` : '';
+
+  const sheetColControls = (ex && editMode) ? `
+    <div class="sheet-col-controls">
+      <label>Sheet
+        <select onchange="changeExcelSheet('${cat.id}','${scheme.id}','${flag.id}', this.value)">
+          ${(ex.sheetNames||[ex.sheetName]).map(sn => `<option value="${escHtml(sn)}" ${sn===ex.sheetName?'selected':''}>${escHtml(sn)}</option>`).join('')}
+        </select>
+      </label>
+      <label>Verification column
+        <select onchange="changeVerifyColumn('${cat.id}','${scheme.id}','${flag.id}', this.value)">
+          <option value="" ${ex.verifyColIndex===-1?'selected':''}>None (all outstanding)</option>
+          ${(ex.aoa && ex.aoa[0] ? ex.aoa[0] : []).map((h,i) => `<option value="${i}" ${ex.verifyColIndex===i?'selected':''}>${escHtml(String(h)||`Column ${i+1}`)}</option>`).join('')}
+        </select>
+      </label>
+    </div>` : '';
+
+  const pdfChips = (att.pdfs||[]).map((p,idx) => `
+    <div class="attachment-chip">
+      ${icon('fileText')}
+      <span class="attachment-chip-name">${escHtml(p.name)}</span>
+      <span class="attachment-chip-meta">PDF</span>
+      <div class="attachment-chip-actions">
+        <button title="View" onclick="viewAttachment('${cat.id}','${scheme.id}','${flag.id}','pdf',${idx})">${icon('search')}</button>
+        ${editMode ? `<button class="danger" title="Remove" onclick="removePdfAttachment('${cat.id}','${scheme.id}','${flag.id}',${idx})">${icon('trash')}</button>` : ''}
+      </div>
+    </div>`).join('');
+
+  const uploadControls = editMode ? `
+    <label class="upload-box-sm">
+      ${icon('fileSpreadsheet')}
+      <div class="upload-box-sm-text">${ex ? 'Replace Excel sheet' : 'Upload Excel sheet'}</div>
+      <div class="upload-box-sm-sub">.xlsx / .xls</div>
+      <input type="file" accept=".xlsx,.xls" onchange="handleExcelUpload(event,'${cat.id}','${scheme.id}','${flag.id}')"/>
+    </label>
+    <label class="upload-box-sm">
+      ${icon('fileText')}
+      <div class="upload-box-sm-text">Upload PDF</div>
+      <div class="upload-box-sm-sub">Working papers</div>
+      <input type="file" accept=".pdf" multiple onchange="handlePdfUpload(event,'${cat.id}','${scheme.id}','${flag.id}')"/>
+    </label>` : '';
+
+  const sideTiles = `
+    <div class="attach-side">
+      ${excelChip}
+      ${sheetColControls}
+      ${pdfChips}
+      ${uploadControls}
+      ${(!ex && !att.pdfs.length && !editMode) ? `<p class="muted-note" style="font-size:.72rem">No attachments yet.</p>` : ''}
+    </div>`;
+
+  const mainArea = ex ? `
+    <p class="muted-note" style="font-size:.78rem;margin-top:2px">Sheet <strong>${escHtml(ex.sheetName||'')}</strong> &middot; verification column <strong>${ex.verifyColIndex>=0 ? escHtml(String((ex.aoa&&ex.aoa[0]&&ex.aoa[0][ex.verifyColIndex])||`Column ${ex.verifyColIndex+1}`)) : 'none set'}</strong>. This data drives the Case Verification tab and Summary Table.</p>
+    <div id="attachment-viewer-${flag.id}" class="viewer-box" style="display:none"></div>` :
+    `<p class="muted-note">Upload an Excel sheet on the right to auto-count cases and link them into Case Verification and the Summary Table.</p>
+     <div id="attachment-viewer-${flag.id}" class="viewer-box" style="display:none"></div>`;
+
+  return `
+    <section class="view-section">
+      <div class="section-head"><h2>Attachments &amp; Field Verification</h2></div>
+      <div class="attach-layout">
+        <div>${mainArea}</div>
+        ${sideTiles}
+      </div>
+    </section>`;
+}
+
+function renderReportsView(){
+  const rows = allFlagRows();
+  const filtered = rows.filter(matchesReportFilter);
+  const stats = computeGlobalStats();
+  return `
+    <section class="stats-strip">
+      ${statCell('Total Red Flags', stats.flags)}
+      ${statCell('Cases Identified', stats.cases)}
+    </section>
+    <section class="view-section">
+      <div class="section-head row">
+        <h2>Consolidated Red Flag Report</h2>
+        <div class="export-actions">
+          <button class="btn-outline" onclick="exportReportToExcel()">${icon('fileSpreadsheet')}<span>Export to Excel</span></button>
+          <button class="btn-outline" onclick="exportReportToPDF()">${icon('fileText')}<span>Export to PDF</span></button>
+        </div>
+      </div>
+      <div class="report-toolbar">
+        <input type="text" class="report-search" id="report-search-input" placeholder="Search category, scheme or red flag&hellip;" value="${escHtml(reportFilter.q)}" oninput="setReportQuery(this.value)"/>
+      </div>
+      <div class="table-wrap">
+        <table class="summary-table">
+          <thead><tr><th>Category</th><th>Scheme</th><th>Red Flag</th><th>Cases</th><th></th></tr></thead>
+          <tbody id="report-tbody">${reportRowsHtml(filtered)}</tbody>
+        </table>
+      </div>
+      <span class="report-result-count" id="report-result-count">${filtered.length} of ${rows.length} red flag${rows.length===1?'':'s'}</span>
+    </section>`;
+}
+
+function renderSettingsView(){
+  return `
+    <section class="view-section">
+      <div class="section-head"><h2>Organization Details</h2></div>
+      <div class="settings-card">
+        <label class="form-field"><span>Office / organization name</span>
+          <input type="text" value="${escHtml(data.organization)}" onchange="updateOrganization(this.value)"/>
+        </label>
+        <label class="form-field"><span>Dashboard title</span>
+          <input type="text" value="${escHtml(data.dashboardTitle)}" onchange="updateDashboardTitle(this.value)"/>
+        </label>
+      </div>
+    </section>
+    <section class="view-section">
+      <div class="section-head"><h2>Appearance</h2></div>
+      <div class="settings-card row-card">
+        <p>Choose how the dashboard looks on this device.</p>
+        <div class="theme-switch-group">
+          <button type="button" class="chip ${theme==='light'?'active':''}" onclick="setTheme('light')">${icon('sun')}<span>Light</span></button>
+          <button type="button" class="chip ${theme==='dark'?'active':''}" onclick="setTheme('dark')">${icon('moon')}<span>Dark</span></button>
+        </div>
+      </div>
+    </section>
+    <section class="view-section">
+      <div class="section-head"><h2>Security</h2></div>
+      <div class="settings-card">
+        <p class="muted-note">This password protects Edit Mode. Anyone with the password can rename, add, remove or upload data anywhere in the dashboard.</p>
+        <label class="form-field"><span>Change admin password</span>
+          <input type="password" id="settings-new-password" placeholder="New password" autocomplete="new-password"/>
+        </label>
+        <div class="settings-actions">
+          <button class="btn-outline" onclick="updateAdminPassword(document.getElementById('settings-new-password').value); document.getElementById('settings-new-password').value='';">${icon('check')}<span>Save New Password</span></button>
+        </div>
+      </div>
+    </section>
+    <section class="view-section">
+      <div class="section-head"><h2>Data Management</h2></div>
+      <div class="settings-card">
+        <p class="muted-note">Dashboard content is stored in this browser only (no shared server). Use a backup file to move data to another device or browser, or to keep an offline copy.</p>
+        <div class="settings-actions">
+          <button class="btn-outline" onclick="downloadBackup()">${icon('download')}<span>Download Backup (JSON)</span></button>
+          <label class="btn-outline file-btn">${icon('upload')}<span>Restore from Backup</span><input type="file" accept="application/json" onchange="restoreBackup(event)" hidden/></label>
+          <button class="btn-outline danger" onclick="resetToSampleData()">${icon('trash')}<span>Reset to Sample Data</span></button>
+        </div>
+      </div>
+    </section>`;
+}
+
+/* ---------- 6. Shared UI builders ------------------------------------------ */
+function statCell(label, value, variant){
+  return `<div class="stat-cell"><span class="stat-label">${escHtml(label)}</span><span class="stat-value ${variant||''}">${value}</span></div>`;
+}
+function editableHeading(value, onchangeAttr){
+  if(editMode){
+    return `<input type="text" class="heading-input h1-style editable" value="${escHtml(value)}" onchange="${onchangeAttr}"/>`;
+  }
+  return `<h1 class="heading-input h1-style heading-static">${escHtml(value)}</h1>`;
+}
+function deleteButton(onclickAttr, label){
+  return editMode ? `<button class="btn-icon danger" title="Delete this ${label}" onclick="${onclickAttr}">${icon('trash')}</button>` : '';
+}
+function editMetaControls(catId, schemeId, flagId, flag){
+  return `
+    <label class="inline-edit-field">Cases
+      <input type="number" min="0" value="${flag.cases ?? 0}" onchange="updateFlagCases('${catId}','${schemeId}','${flagId}', this.value)"/>
+    </label>`;
+}
+function emptyState(title, msg){
+  return `<div class="empty-state"><div class="empty-icon">${icon('folder')}</div><h3>${escHtml(title)}</h3><p>${escHtml(msg)}</p></div>`;
+}
+function notFoundSection(title, msg){
+  return `<section class="view-section"><div class="empty-state">
+    <div class="empty-icon">${icon('alertTriangle')}</div>
+    <h3>${escHtml(title)}</h3><p>${escHtml(msg)}</p>
+    <a class="btn-primary" href="#/" style="margin-top:6px">${icon('homeIcon')}<span>Back to Dashboard</span></a>
+  </div></section>`;
+}
+
+/* ---------- 7. CRUD --------------------------------------------------------- */
+function renameCategory(id, val){
+  const c = findCategory(id); if(!c || !val.trim()) return;
+  c.name = val.trim(); saveData(); renderSidebarNav(); renderBreadcrumb(currentRoute);
+}
+function renameScheme(catId, schemeId, val){
+  const s = findScheme(catId, schemeId); if(!s || !val.trim()) return;
+  s.name = val.trim(); saveData(); renderBreadcrumb(currentRoute);
+}
+function renameFlag(catId, schemeId, flagId, val){
+  const f = findFlag(catId, schemeId, flagId); if(!f || !val.trim()) return;
+  f.name = val.trim(); saveData(); renderBreadcrumb(currentRoute);
+}
+function updateFlagDescription(catId, schemeId, flagId, val){
+  const f = findFlag(catId, schemeId, flagId); if(!f) return;
+  f.description = val; saveData();
+}
+function updateSchemeDescription(catId, schemeId, val){
+  const s = findScheme(catId, schemeId); if(!s) return;
+  s.description = val; saveData();
+}
+function updateFlagCases(catId, schemeId, flagId, val){
+  const f = findFlag(catId, schemeId, flagId); if(!f) return;
+  f.cases = Math.max(0, parseInt(val,10) || 0); saveData(); renderRoute(true);
+}
+function updateOrganization(val){ data.organization = val; saveData(); renderHeaderMeta(); }
+function updateDashboardTitle(val){ data.dashboardTitle = val || 'Data-Led Audit Dashboard'; saveData(); renderHeaderMeta(); }
+
+function deleteCategory(id){
+  const cat = findCategory(id); if(!cat) return;
+  if(!confirm(`Delete "${cat.name}" and everything under it (schemes and red flags)? This cannot be undone.`)) return;
+  data.categories = data.categories.filter(c => c.id !== id);
+  saveData(); navigateTo('#/');
+}
+function deleteScheme(catId, schemeId){
+  const cat = findCategory(catId); const scheme = findScheme(catId, schemeId);
+  if(!cat || !scheme) return;
+  if(!confirm(`Delete "${scheme.name}" and all its red flags? This cannot be undone.`)) return;
+  cat.schemes = cat.schemes.filter(s => s.id !== schemeId);
+  saveData(); navigateTo(`#/category/${catId}`);
+}
+function deleteFlag(catId, schemeId, flagId){
+  const scheme = findScheme(catId, schemeId); const flag = findFlag(catId, schemeId, flagId);
+  if(!scheme || !flag) return;
+  if(!confirm(`Delete the red flag "${flag.name}"? This cannot be undone.`)) return;
+  scheme.redFlags = scheme.redFlags.filter(f => f.id !== flagId);
+  saveData(); navigateTo(`#/scheme/${catId}/${schemeId}`);
+}
+
+function openAddModal(kind, ctx){
+  addModalCtx = { kind, ctx: ctx || {} };
+  const titles = { category:'Add New Audit Category', scheme:'Add New Scheme', flag:'Add New Red Flag' };
+  const placeholders = { category:'e.g. Mid-Day Meal Scheme Audit', scheme:'e.g. Mid-Day Meal Scheme', flag:'e.g. Excess Enrolment Claimed' };
+  document.getElementById('add-modal-title').textContent = titles[kind] || 'Add New';
+  const nameInput = document.getElementById('add-modal-name');
+  nameInput.value = ''; nameInput.placeholder = placeholders[kind] || '';
+  document.getElementById('add-modal-desc').value = '';
+  document.getElementById('add-modal-risk-row').style.display = kind === 'flag' ? 'flex' : 'none';
+  document.getElementById('add-modal-cases').value = 0;
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => nameInput.focus(), 60);
+}
+function closeAddModal(){ document.getElementById('modal-overlay').classList.remove('open'); addModalCtx = null; }
+
+function submitAddModal(e){
+  e.preventDefault();
+  const name = document.getElementById('add-modal-name').value.trim();
+  if(!name || !addModalCtx) return;
+  const desc = document.getElementById('add-modal-desc').value.trim();
+  const { kind, ctx } = addModalCtx;
+
+  if(kind === 'category'){
+    const id = uniqueSlug(name, data.categories.map(c => c.id));
+    data.categories.push({ id, name, shortName:name, icon:'folder', description:desc, schemes:[] });
+    saveData(); closeAddModal(); navigateTo(`#/category/${id}`);
+  } else if(kind === 'scheme'){
+    const cat = findCategory(ctx.categoryId); if(!cat) return;
+    const id = uniqueSlug(name, cat.schemes.map(s => s.id));
+    cat.schemes.push({ id, name, shortName:name, icon:'folder', description:desc, redFlags:[] });
+    saveData(); closeAddModal(); navigateTo(`#/scheme/${cat.id}/${id}`);
+  } else if(kind === 'flag'){
+    const scheme = findScheme(ctx.categoryId, ctx.schemeId); if(!scheme) return;
+    const id = uniqueSlug(name, scheme.redFlags.map(f => f.id));
+    const cases = Math.max(0, parseInt(document.getElementById('add-modal-cases').value, 10) || 0);
+    scheme.redFlags.push({
+      id, name, cases, description: desc,
+      summaryTable: { columns:['S.No','Particulars','Amount (\u20b9)','Status'], rows:[] },
+      attachments: { excel:null, pdfs:[] },
+      verification: { total:0, auditFinding:0, noIssue:0, outstanding:0, conversionPct:0 }
+    });
+    saveData(); closeAddModal(); navigateTo(`#/flag/${ctx.categoryId}/${ctx.schemeId}/${id}`);
+  }
+}
+
+/* ---------- 8. Export to Excel / PDF ---------------------------------------- */
+function printFallback(){
+  alert('The PDF library did not load (likely no internet access right now), so the browser print dialog will open instead \u2014 choose "Save as PDF" as the destination.');
+  window.print();
+}
+
+/* ---------- Attachments: upload, parse, view --------------------------- */
+function fileToDataURL(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function findVerificationColumn(headerRow){
+  const candidates = ['field verification','field verification status','verification','verified','status'];
+  for(let i=0;i<headerRow.length;i++){
+    const h = String(headerRow[i]||'').trim().toLowerCase();
+    if(candidates.includes(h)) return i;
+  }
+  // fallback: any header containing "verif"
+  for(let i=0;i<headerRow.length;i++){
+    const h = String(headerRow[i]||'').trim().toLowerCase();
+    if(h.includes('verif')) return i;
+  }
+  return -1;
+}
+
+function computeVerificationStats(aoa, overrideColIndex){
+  if(!aoa || aoa.length < 2) return { total:0, auditFinding:0, noIssue:0, outstanding:0, conversionPct:0, colIndex:-1 };
+  const header = aoa[0];
+  const colIndex = (overrideColIndex === undefined) ? findVerificationColumn(header) : overrideColIndex;
+  const dataRows = aoa.slice(1).filter(r => r.some(cell => String(cell||'').trim() !== ''));
+  const total = dataRows.length;
+  let auditFinding = 0, noIssue = 0, outstanding = 0;
+  if(colIndex >= 0){
+    dataRows.forEach(r => {
+      const val = String(r[colIndex]||'').trim().toLowerCase();
+      if(val === 'yes' || val === 'y') auditFinding++;
+      else if(val === 'no' || val === 'n') noIssue++;
+      else outstanding++;
+    });
+  } else {
+    outstanding = total;
+  }
+  const conversionPct = total > 0 ? Math.round((auditFinding/total)*1000)/10 : 0;
+  return { total, auditFinding, noIssue, outstanding, conversionPct, colIndex };
+}
+
+async function handleExcelUpload(e, catId, schemeId, flagId){
+  const file = e.target.files[0]; if(!file) return;
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  if(typeof XLSX === 'undefined'){ alert('The Excel library did not load. Check your internet connection and try again.'); e.target.value=''; return; }
+  try{
+    const dataUrl = await fileToDataURL(file);
+    const base64 = dataUrl.split(',')[1];
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+    const wb = XLSX.read(bytes, { type:'array' });
+    const sheetNames = wb.SheetNames;
+    const firstSheet = sheetNames[0];
+    const sheetsData = {};
+    sheetNames.forEach(sn => { sheetsData[sn] = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header:1, defval:'' }); });
+    const aoa = sheetsData[firstSheet];
+    const autoCol = findVerificationColumn(aoa[0] || []);
+
+    flag.attachments = flag.attachments || { excel:null, pdfs:[] };
+    flag.attachments.excel = {
+      name:file.name, data:dataUrl, sheetNames, sheetsData,
+      sheetName:firstSheet, aoa, verifyColIndex:autoCol,
+      uploadedAt:new Date().toISOString()
+    };
+    recalcFlagVerification(flag);
+    saveData();
+    renderRoute(true);
+  }catch(err){
+    alert('Could not read this Excel file. Please check the format and try again.');
+    console.error(err);
+  }
+  e.target.value = '';
+}
+
+function recalcFlagVerification(flag){
+  const ex = flag.attachments && flag.attachments.excel;
+  if(!ex){ flag.verification = { total:0, auditFinding:0, noIssue:0, outstanding:0, conversionPct:0 }; flag.cases = 0; return; }
+  const stats = computeVerificationStats(ex.aoa, ex.verifyColIndex);
+  flag.verification = { total:stats.total, auditFinding:stats.auditFinding, noIssue:stats.noIssue, outstanding:stats.outstanding, conversionPct:stats.conversionPct };
+  flag.cases = stats.total;
+}
+
+function changeExcelSheet(catId, schemeId, flagId, sheetName){
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  const ex = flag.attachments && flag.attachments.excel; if(!ex || !ex.sheetsData) return;
+  ex.sheetName = sheetName;
+  ex.aoa = ex.sheetsData[sheetName] || [[]];
+  ex.verifyColIndex = findVerificationColumn(ex.aoa[0] || []);
+  recalcFlagVerification(flag);
+  saveData();
+  renderRoute(true);
+}
+
+function changeVerifyColumn(catId, schemeId, flagId, colIndexStr){
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  const ex = flag.attachments && flag.attachments.excel; if(!ex) return;
+  ex.verifyColIndex = colIndexStr === '' ? -1 : parseInt(colIndexStr, 10);
+  recalcFlagVerification(flag);
+  saveData();
+  renderRoute(true);
+}
+
+async function handlePdfUpload(e, catId, schemeId, flagId){
+  const files = Array.from(e.target.files || []); if(!files.length) return;
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  flag.attachments = flag.attachments || { excel:null, pdfs:[] };
+  flag.attachments.pdfs = flag.attachments.pdfs || [];
+  for(const file of files){
+    try{
+      const dataUrl = await fileToDataURL(file);
+      flag.attachments.pdfs.push({ name:file.name, data:dataUrl, uploadedAt:new Date().toISOString() });
+    }catch(err){ console.error(err); }
+  }
+  saveData();
+  renderRoute(true);
+  e.target.value = '';
+}
+
+function removeExcelAttachment(catId, schemeId, flagId){
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  if(!confirm('Remove the attached Excel sheet? Case counts and conversion stats will reset.')) return;
+  flag.attachments.excel = null;
+  flag.verification = { total:0, auditFinding:0, noIssue:0, outstanding:0, conversionPct:0 };
+  flag.cases = 0;
+  saveData(); renderRoute(true);
+}
+function removePdfAttachment(catId, schemeId, flagId, idx){
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  if(!confirm('Remove this PDF attachment?')) return;
+  flag.attachments.pdfs.splice(idx,1);
+  saveData(); renderRoute(true);
+}
+
+async function viewAttachment(catId, schemeId, flagId, type, pdfIdx){
+  const flag = findFlag(catId, schemeId, flagId); if(!flag) return;
+  const box = document.getElementById(`attachment-viewer-${flagId}`);
+  if(!box) return;
+
+  if(box.style.display !== 'none' && box.dataset.current === `${type}-${pdfIdx ?? ''}`){
+    box.style.display = 'none'; box.innerHTML=''; box.dataset.current=''; return;
+  }
+  box.dataset.current = `${type}-${pdfIdx ?? ''}`;
+  box.style.display = 'block';
+
+  if(type === 'excel'){
+    const ex = flag.attachments.excel; if(!ex) return;
+    const aoa = ex.aoa || [];
+    const verifyCol = (ex.verifyColIndex === undefined) ? computeVerificationStats(aoa).colIndex : ex.verifyColIndex;
+    const header = aoa[0] || [];
+    const rows = aoa.slice(1).filter(r => r.some(c => String(c||'').trim()!==''));
+    const rowsHtml = rows.map(r => {
+      const cells = header.map((_,i) => {
+        const raw = String(r[i]||'').trim();
+        let cls = '';
+        if(i === verifyCol){
+          const v = raw.toLowerCase();
+          if(v==='yes'||v==='y') cls='col-found';
+          else if(v==='no'||v==='n') cls='col-noissue';
+          else cls='col-outstanding';
+        }
+        return `<td class="${cls}">${escHtml(raw || (i===verifyCol ? 'Outstanding' : ''))}</td>`;
+      }).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    box.innerHTML = `
+      <div class="viewer-bar"><span>${icon('fileSpreadsheet')}${escHtml(ex.name)} &middot; Sheet: ${escHtml(ex.sheetName||'')}</span><button class="btn-icon" onclick="viewAttachment('${catId}','${schemeId}','${flagId}','excel')">${icon('x')}</button></div>
+      <div class="viewer-body"><table class="mini-table"><thead><tr>${header.map(h=>`<th>${escHtml(String(h))}</th>`).join('')}</tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+    hydrateIcons(box);
+  } else if(type === 'pdf'){
+    const pdf = (flag.attachments.pdfs||[])[pdfIdx]; if(!pdf) return;
+    box.innerHTML = `<div class="viewer-bar"><span>${icon('fileText')}${escHtml(pdf.name)}</span><button class="btn-icon" onclick="viewAttachment('${catId}','${schemeId}','${flagId}','pdf',${pdfIdx})">${icon('x')}</button></div><div class="viewer-body" id="pdf-render-${flagId}-${pdfIdx}"><p class="muted-note">Rendering PDF&hellip;</p></div>`;
+    hydrateIcons(box);
+    try{
+      if(typeof pdfjsLib === 'undefined'){
+        document.getElementById(`pdf-render-${flagId}-${pdfIdx}`).innerHTML = '<p class="muted-note">PDF preview library did not load. You can still re-download the file from Settings backup.</p>';
+        return;
+      }
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const base64 = pdf.data.split(',')[1];
+      const binary = atob(base64);
+      const bytes = new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++) bytes[i] = binary.charCodeAt(i);
+      const loaded = await pdfjsLib.getDocument({ data: bytes }).promise;
+      const container = document.getElementById(`pdf-render-${flagId}-${pdfIdx}`);
+      container.innerHTML = '';
+      const maxPages = Math.min(loaded.numPages, 15);
+      for(let p=1; p<=maxPages; p++){
+        const page = await loaded.getPage(p);
+        const viewport = page.getViewport({ scale: 1.2 });
+        const canvas = document.createElement('canvas');
+        canvas.className = 'pdf-page-canvas';
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        container.appendChild(canvas);
+      }
+      if(loaded.numPages > maxPages){
+        const note = document.createElement('p');
+        note.className = 'muted-note';
+        note.textContent = `Showing first ${maxPages} of ${loaded.numPages} pages.`;
+        container.appendChild(note);
+      }
+    }catch(err){
+      console.error(err);
+      const el = document.getElementById(`pdf-render-${flagId}-${pdfIdx}`);
+      if(el) el.innerHTML = '<p class="muted-note">This PDF could not be rendered for preview.</p>';
+    }
+  }
+}
+
+function getEffectiveTableData(flag){
+  const ex = flag.attachments && flag.attachments.excel;
+  if(ex && Array.isArray(ex.aoa) && ex.aoa.length){
+    const header = (ex.aoa[0] || []).map(h => String(h));
+    const rows = ex.aoa.slice(1).filter(r => r.some(c => String(c||'').trim()!==''))
+      .map(r => header.map((_,i) => String(r[i] ?? '')));
+    return { columns: header, rows };
+  }
+  const t = flag.summaryTable || { columns:[], rows:[] };
+  return { columns: t.columns, rows: t.rows };
+}
+
+function exportFlagToExcel(catId, schemeId, flagId){
+  const cat = findCategory(catId), scheme = findScheme(catId, schemeId), flag = findFlag(catId, schemeId, flagId);
+  if(!flag) return;
+  if(typeof XLSX === 'undefined'){ alert('The Excel export library did not load. Check your internet connection and try again.'); return; }
+  const t = getEffectiveTableData(flag);
+  const colCount = Math.max(1, t.columns.length);
+  const aoa = [
+    [data.organization], [`${cat.shortName||cat.name} \u2014 ${scheme.shortName||scheme.name}`],
+    [`Red Flag: ${flag.name}`], [`Cases: ${flag.cases ?? 0}`],
+    [], t.columns, ...t.rows
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = t.columns.map(() => ({ wch:20 }));
+  ws['!merges'] = [0,1,2,3].map(r => ({ s:{r,c:0}, e:{r,c:colCount-1} }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Summary');
+  XLSX.writeFile(wb, `${flag.id}-summary.xlsx`);
+}
+
+function exportFlagToPDF(catId, schemeId, flagId){
+  const cat = findCategory(catId), scheme = findScheme(catId, schemeId), flag = findFlag(catId, schemeId, flagId);
+  if(!flag) return;
+  if(!window.jspdf || !window.jspdf.jsPDF){ printFallback(); return; }
+  const { jsPDF } = window.jspdf;
+  const t = getEffectiveTableData(flag);
+  const wide = (t.columns || []).length > 6;
+  const doc = new jsPDF({ orientation: wide ? 'landscape' : 'portrait' });
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(data.organization, 14, 15);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text(`${cat.shortName||cat.name} \u2014 ${scheme.shortName||scheme.name}`, 14, 21);
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text(`Red Flag: ${flag.name}`, 14, 29);
+  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.text(`Cases: ${flag.cases ?? 0}`, 14, 35);
+  if(typeof doc.autoTable === 'function'){
+    doc.autoTable({
+      startY: 40,
+      head: [t.columns],
+      body: t.rows.map(r => r.map(String)),
+      styles: { fontSize:8, cellPadding:2.5 },
+      headStyles: { fillColor:[11,42,77], textColor:255 },
+      alternateRowStyles: { fillColor:[244,247,251] }
+
+    });
+  }
+  doc.save(`${flag.id}-summary.pdf`);
+}
+
+function allFlagRows(){
+  const rows = [];
+  data.categories.forEach(c => c.schemes.forEach(s => s.redFlags.forEach(f => rows.push({ c, s, f }))));
+  return rows;
+}
+function matchesReportFilter({ c, s, f }){
+  if(reportFilter.q){
+    const hay = `${c.name} ${s.name} ${f.name}`.toLowerCase();
+    if(!hay.includes(reportFilter.q.toLowerCase())) return false;
+  }
+  return true;
+}
+function reportRowsHtml(rows){
+  if(!rows.length) return `<tr><td colspan="5"><div class="empty-state compact"><p>No red flags match this filter.</p></div></td></tr>`;
+  return rows.map(({c,s,f}) => `
+    <tr>
+      <td>${escHtml(c.shortName||c.name)}</td>
+      <td>${escHtml(s.shortName||s.name)}</td>
+      <td>${escHtml(f.name)}</td>
+      <td>${f.cases ?? 0}</td>
+      <td><a class="table-link" href="#/flag/${c.id}/${s.id}/${f.id}">Open${icon('chevronRight')}</a></td>
+    </tr>`).join('');
+}
+function updateReportsResults(){
+  const rows = allFlagRows();
+  const filtered = rows.filter(matchesReportFilter);
+  const tbody = document.getElementById('report-tbody');
+  if(tbody){ tbody.innerHTML = reportRowsHtml(filtered); hydrateIcons(tbody); }
+  const countEl = document.getElementById('report-result-count');
+  if(countEl) countEl.textContent = `${filtered.length} of ${rows.length} red flag${rows.length===1?'':'s'}`;
+}
+function setReportQuery(v){ reportFilter.q = v; updateReportsResults(); }
+
+function exportReportToExcel(){
+  if(typeof XLSX === 'undefined'){ alert('The Excel export library did not load. Check your internet connection and try again.'); return; }
+  const rows = allFlagRows().filter(matchesReportFilter);
+  const aoa = [
+    [data.organization], ['Consolidated Red Flag Report'], [],
+    ['Category','Scheme','Red Flag','Cases'],
+    ...rows.map(({c,s,f}) => [c.shortName||c.name, s.shortName||s.name, f.name, f.cases ?? 0])
+  ];
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [{wch:26},{wch:30},{wch:36},{wch:8}];
+  ws['!merges'] = [{ s:{r:0,c:0}, e:{r:0,c:3} }, { s:{r:1,c:0}, e:{r:1,c:3} }];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Report');
+  XLSX.writeFile(wb, 'red-flag-report.xlsx');
+}
+function exportReportToPDF(){
+  if(!window.jspdf || !window.jspdf.jsPDF){ printFallback(); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text(data.organization, 14, 15);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.text('Consolidated Red Flag Report', 14, 22);
+  const rows = allFlagRows().filter(matchesReportFilter);
+  if(typeof doc.autoTable === 'function'){
+    doc.autoTable({
+      startY: 28,
+      head: [['Category','Scheme','Red Flag','Cases']],
+      body: rows.map(({c,s,f}) => [c.shortName||c.name, s.shortName||s.name, f.name, String(f.cases ?? 0)]),
+      styles: { fontSize:8, cellPadding:2.5 },
+      headStyles: { fillColor:[11,42,77], textColor:255 }
+    });
+  }
+  doc.save('red-flag-report.pdf');
+}
+
+/* ---------- 9. Search overlay ----------------------------------------------- */
+function openSearch(){
+  const overlay = document.getElementById('search-overlay');
+  overlay.classList.add('open');
+  const input = document.getElementById('search-input');
+  input.value = '';
+  document.getElementById('search-results').innerHTML = searchEmptyHint();
+  setTimeout(() => input.focus(), 60);
+}
+function closeSearch(){ document.getElementById('search-overlay').classList.remove('open'); }
+function searchEmptyHint(){ return `<div class="empty-state compact"><p>Search across categories, schemes and red flags.</p></div>`; }
+function runSearch(q){
+  const results = document.getElementById('search-results');
+  q = q.trim().toLowerCase();
+  if(!q){ results.innerHTML = searchEmptyHint(); return; }
+  const hits = [];
+  data.categories.forEach(c => {
+    if(c.name.toLowerCase().includes(q)) hits.push({ type:'Category', label:c.name, hash:`#/category/${c.id}` });
+    c.schemes.forEach(s => {
+      if(s.name.toLowerCase().includes(q)) hits.push({ type:'Scheme', label:s.name, sub:c.shortName||c.name, hash:`#/scheme/${c.id}/${s.id}` });
+      s.redFlags.forEach(f => {
+        if(f.name.toLowerCase().includes(q)) hits.push({ type:'Red Flag', label:f.name, sub:s.shortName||s.name, hash:`#/flag/${c.id}/${s.id}/${f.id}` });
+      });
+    });
+  });
+  results.innerHTML = hits.length
+    ? hits.slice(0,30).map(h => `
+        <a class="search-result" href="${h.hash}" onclick="closeSearch()">
+          <span class="search-result-type">${h.type}</span>
+          <span class="search-result-label">${escHtml(h.label)}</span>
+          ${h.sub ? `<span class="search-result-sub">${escHtml(h.sub)}</span>` : ''}
+        </a>`).join('')
+    : `<div class="empty-state compact"><p>No matches for \u201c${escHtml(q)}\u201d.</p></div>`;
+}
+
+/* ---------- 10. Theme + sidebar collapse ------------------------------------- */
+function setTheme(t){
+  theme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  try{ localStorage.setItem(THEME_KEY, t); }catch(e){}
+  const btn = document.getElementById('theme-toggle');
+  if(btn) btn.innerHTML = icon(t === 'light' ? 'moon' : 'sun');
+  if(currentRoute.view === 'settings') renderRoute(true);
+}
+function toggleTheme(){ setTheme(theme === 'light' ? 'dark' : 'light'); }
+
+function applySidebarState(){
+  const shell = document.getElementById('app-shell');
+  if(shell) shell.classList.toggle('sidebar-collapsed', sidebarCollapsed);
+}
+function toggleSidebar(){
+  sidebarCollapsed = !sidebarCollapsed;
+  try{ localStorage.setItem(SIDEBAR_KEY, sidebarCollapsed ? '1' : '0'); }catch(e){}
+  applySidebarState();
+}
+function toggleMobileSidebar(){
+  document.getElementById('app-shell').classList.toggle('sidebar-mobile-open');
+}
+function closeMobileSidebar(){
+  document.getElementById('app-shell')?.classList.remove('sidebar-mobile-open');
+}
+
+/* ---------- 11. Data management (Settings page) ----------------------------- */
+function downloadBackup(){
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'dac-dashboard-backup.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+function restoreBackup(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const parsed = JSON.parse(ev.target.result);
+      if(!parsed || !Array.isArray(parsed.categories)) throw new Error('Invalid file');
+      if(!confirm('Replace the current dashboard data with this backup?')) return;
+      data = parsed;
+      saveData(); renderHeaderMeta(); renderSidebarNav(); renderRoute(true);
+      alert('Backup restored.');
+    }catch(err){ alert('This file could not be read as a dashboard backup.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+function resetToSampleData(){
+  if(!confirm('Reset all data to the original sample dataset? This cannot be undone.')) return;
+  data = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  saveData(); renderHeaderMeta(); renderSidebarNav(); navigateTo('#/');
+}
+
+/* ---------- 12. Edit mode ------------------------------------------------------ */
+function toggleEditMode(){
+  if(!editMode && !pwUnlocked){
+    openPasswordGate(() => { doToggleEditMode(); });
+    return;
+  }
+  doToggleEditMode();
+}
+function doToggleEditMode(){
+  editMode = !editMode;
+  const btn = document.getElementById('edit-toggle');
+  btn.classList.toggle('active', editMode);
+  btn.innerHTML = editMode ? `<span data-icon="check"></span><span>Done Editing</span>` : `<span data-icon="pencil"></span><span>Edit Mode</span>`;
+  hydrateIcons(btn);
+  renderRoute(true);
+}
+
+/* ---------- Admin password gate ------------------------------------------ */
+let pwGateCallback = null;
+function openPasswordGate(onSuccess){
+  pwGateCallback = onSuccess;
+  const overlay = document.getElementById('password-overlay');
+  const input = document.getElementById('password-input');
+  const err = document.getElementById('password-error');
+  input.value = '';
+  err.style.display = 'none';
+  overlay.classList.add('open');
+  setTimeout(() => input.focus(), 60);
+}
+function closePasswordGate(){
+  document.getElementById('password-overlay').classList.remove('open');
+  pwGateCallback = null;
+}
+function submitPasswordGate(e){
+  e.preventDefault();
+  const input = document.getElementById('password-input');
+  const err = document.getElementById('password-error');
+  const entered = input.value;
+  const correct = data.adminPassword || 'admin123';
+  if(entered === correct){
+    pwUnlocked = true;
+    const cb = pwGateCallback;
+    closePasswordGate();
+    if(cb) cb();
+  } else {
+    err.style.display = 'block';
+    input.value = '';
+    input.focus();
+  }
+}
+function updateAdminPassword(val){
+  if(!val || !val.trim()) return;
+  data.adminPassword = val.trim();
+  saveData();
+  alert('Admin password updated.');
+}
+
+/* ---------- 13. Init ------------------------------------------------------------ */
+function init(){
+  document.documentElement.setAttribute('data-theme', theme);
+  const themeBtn = document.getElementById('theme-toggle');
+  if(themeBtn) themeBtn.innerHTML = icon(theme === 'light' ? 'moon' : 'sun');
+  applySidebarState();
+  renderHeaderMeta();
+  hydrateIcons(document);
+  renderRoute(true);
+  updateLastUpdatedLabel();
+  window.addEventListener('hashchange', () => renderRoute());
+}
+
+document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape'){ closeSearch(); closeAddModal(); }
+  if(e.key === '/' && document.activeElement && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){
+    e.preventDefault(); openSearch();
+  }
+});
+
+</script>
+</body>
+</html>
